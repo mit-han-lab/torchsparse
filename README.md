@@ -86,12 +86,10 @@ class BasicConvolutionBlock(nn.Module):
     def __init__(self, inc, outc, ks=3, stride=1, dilation=1):
         super().__init__()
         self.net = nn.Sequential(
-            spnn.Conv3d(inc,
-                                 outc,
-                                 kernel_size=ks,
-                                 dilation=dilation,
-                                 stride=stride), spnn.BatchNorm(outc),
-            spnn.ReLU(True))
+            spnn.Conv3d(inc, outc, kernel_size=ks, dilation=dilation, stride=stride),
+            spnn.BatchNorm(outc),
+            spnn.ReLU(True)
+        )
 
     def forward(self, x):
         out = self.net(x)
@@ -138,18 +136,14 @@ You are also welcomed to check out our [SPVNAS](https://github.com/mit-han-lab/e
 
 ## Speed Comparison Between torchsparse and MinkowskiEngine
 
-We benchmark the performance of our torchsparse and latest [MinkowskiEngine V0.4.3](https://github.com/NVIDIA/MinkowskiEngine) here:
+We benchmark the performance of our torchsparse and latest [MinkowskiEngine V0.4.3](https://github.com/NVIDIA/MinkowskiEngine) here, latency is measured on NVIDIA GTX 1080Ti GPU:
 
-|        Library         |         Network          | Latency (GTX1080Ti) |
-| :--------------------: | :----------------------: | :-----------------: |
-| MinkowskiEngine V0.4.3 | MinkUNet18C (MACs / 10)  |        224.7        |
-| MinkowskiEngine V0.4.3 |  MinkUNet18C (MACs / 4)  |        244.3        |
-| MinkowskiEngine V0.4.3 | MinkUNet18C (MACs / 2.5) |        269.6        |
-| MinkowskiEngine V0.4.3 |  MinkUNet18C  |        323.5        |
-|   torchsparse V1.0.0   | MinkUNet18C (MACs / 10)  |        124.3        |
-|   torchsparse V1.0.0   |  MinkUNet18C (MACs / 4)  |        160.9        |
-|   torchsparse V1.0.0   | MinkUNet18C (MACs / 2.5) |        214.3        |
-|   torchsparse V1.0.0   |  MinkUNet18C  |        294.0        |
+|         Network          | Latency (ME V0.4.3) | Latency (torchsparse V1.0.0) |
+| :----------------------: | :-----------------: | :--------------------------: |
+| MinkUNet18C (MACs / 10)  |        224.7        |            124.3             |
+|  MinkUNet18C (MACs / 4)  |        244.3        |            160.9             |
+| MinkUNet18C (MACs / 2.5) |        269.6        |            214.3             |
+|       MinkUNet18C        |        323.5        |            294.0             |
 
 
 
