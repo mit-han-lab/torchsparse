@@ -9,6 +9,10 @@
   year = {2020}
 }
 ```
+
+**[NEW!!]** We are releasing `torchsparse` v1.1, which has a significant speedup over the previous v1.0, please have a look!
+
+
 ## Overview
 
 We release `torchsparse`, a high-performance computing library for efficient 3D sparse convolution. This library aims at accelerating sparse computation in 3D, in particular the Sparse Convolution operation. 
