@@ -150,8 +150,7 @@ def conv3d(inputs, kernel, bias=None, stride=1, dilation=1, transpose=False):
             idx_query = sphashquery(hash_query, hash_target)
             idx_query = list(convert_neighbor_map_gpu(idx_query))
             idx_query[1] = idx_query[1].to('cpu')
-            sizes = ((idx_query[0][:, 0].max() + 1).item(),
-                     (idx_query[0][:, 1].max() + 1).item())
+            sizes = (features.shape[0], new_coords.shape[0])
             output_features = sparseconv_op(features, kernel, idx_query[0],
                                             idx_query[1], sizes, transpose)
             if bias is not None:
@@ -180,8 +179,7 @@ def conv3d(inputs, kernel, bias=None, stride=1, dilation=1, transpose=False):
                 idx_query = sphashquery(hash_query, hash_target)
                 idx_query = list(convert_neighbor_map_gpu(idx_query))
                 idx_query[1] = idx_query[1].to('cpu')
-                sizes = ((idx_query[0][:, 0].max() + 1).item(),
-                         (idx_query[0][:, 1].max() + 1).item())
+                sizes = (features.shape[0], features.shape[0])
                 output_features = sparseconv_op(features, kernel, idx_query[0],
                                                 idx_query[1], sizes, transpose)
                 if bias is not None:
