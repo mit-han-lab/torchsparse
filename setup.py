@@ -4,6 +4,7 @@ from setuptools import find_packages, setup
 
 from torch.utils.cpp_extension import BuildExtension, CppExtension, CUDAExtension, CUDA_HOME
 has_cuda = (torch.cuda.is_available() and CUDA_HOME is not None) or os.getenv("FORCE_CUDA", "0") == "1"
+print("Has cuda: " + str(has_cuda))
 
 from torchsparse import __version__
 
