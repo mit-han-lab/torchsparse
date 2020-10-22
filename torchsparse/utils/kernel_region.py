@@ -1,11 +1,9 @@
-import json
 import os
 import os.path
 import random
 import sys
 from collections import Sequence
 
-import h5py
 import numpy as np
 import torch
 
