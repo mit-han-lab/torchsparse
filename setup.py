@@ -33,6 +33,7 @@ file_lis = [
     'torchsparse/src/others/convert_neighbor_map_cpu.cpp',
     'torchsparse/src/others/count.cpp',
     'torchsparse/src/others/count_gpu.cu',
+    'torchsparse/src/others/count_cpu.cpp',
     'torchsparse/src/others/insertion.cpp',
     'torchsparse/src/others/insertion_gpu.cu',
     'torchsparse/src/others/insertion_cpu.cpp',
@@ -47,6 +48,7 @@ file_lis = [
     'torchsparse/src/others/convert_neighbor_map_cpu.cpp',
     'torchsparse/src/others/insertion_cpu.cpp',
     'torchsparse/src/others/query_cpu.cpp',
+    'torchsparse/src/others/count_cpu.cpp'
 ]
 
 extra_compile_args = {

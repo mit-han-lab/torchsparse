@@ -7,6 +7,7 @@
 #include "others/convert_neighbor_map_cpu_header.h"
 #include "others/insertion_cpu_header.h"
 #include "others/query_cpu_header.h"
+#include "others/count_cpu_header.h"
 
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
@@ -20,6 +21,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("cpu_devoxelize_forward", &cpu_devoxelize_forward, "Devoxelization forward (CPU)");
     m.def("cpu_devoxelize_backward", &cpu_devoxelize_backward, "Devoxelization backward (CPU)");
     m.def("cpu_query_forward", &cpu_query_forward, "hash query forward (CPU)");
+    m.def("cpu_count_forward", &cpu_count_forward, "count forward (CPU)");
 }
 
 

@@ -69,9 +69,14 @@ def calc_ti_weights(pc, idx_query, scale=1.0):
 class DevoxelizationGPU(Function):
     @staticmethod
     def forward(ctx, feat, indices, weights):
-        out = torchsparse_cuda.devoxelize_forward(
-            feat.contiguous(),
-            indices.contiguous().int(), weights.contiguous())
+        if 'cuda' in str(feat.device):
+            out = torchsparse_cuda.devoxelize_forward(
+                feat.contiguous(),
+                indices.contiguous().int(), weights.contiguous())
+        else:
+            out = torchsparse_cuda.cpu_devoxelize_forward(
+                feat.contiguous(),
+                indices.contiguous().int(), weights.contiguous())
 
         ctx.for_backwards = (indices.contiguous().int(), weights,
                              feat.shape[0])
@@ -82,8 +87,12 @@ class DevoxelizationGPU(Function):
     def backward(ctx, grad_out):
         indices, weights, n = ctx.for_backwards
 
-        grad_features = torchsparse_cuda.devoxelize_backward(
-            grad_out.contiguous(), indices, weights, n)
+        if 'cuda' in str(grad_out.device):
+            grad_features = torchsparse_cuda.devoxelize_backward(
+                grad_out.contiguous(), indices, weights, n)
+        else:
+            grad_features = torchsparse_cuda.cpu_devoxelize_backward(
+                grad_out.contiguous(), indices, weights, n)
 
         return grad_features, None, None
 
