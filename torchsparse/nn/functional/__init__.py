@@ -8,3 +8,4 @@ from .voxelize import *
 from .count import *
 from .activation import *
 from .pooling import *
+from .detection import *
