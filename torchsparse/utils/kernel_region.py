@@ -12,11 +12,10 @@ __all__ = ['KernelRegion']
 
 class KernelRegion:
     def __init__(self,
-                 kernel_size=3,
-                 tensor_stride=1,
-                 dilation=1,
-                 dim=[0, 1, 2]):
-
+                 kernel_size: int = 3,
+                 tensor_stride: int = 1,
+                 dilation: int = 1,
+                 dim=[0, 1, 2]) -> None:
         self.kernel_size = kernel_size
         self.tensor_stride = tensor_stride
         self.dilation = dilation
