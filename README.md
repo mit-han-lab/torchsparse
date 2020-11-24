@@ -12,9 +12,7 @@ We release `torchsparse`, a high-performance computing library for efficient 3D 
 
 <img src="https://hanlab.mit.edu/projects/spvnas/figures/sparseconv_illustration.gif" width="1080">
 
-The major advantage of this library is that we support all computation on the GPU, especially the kernel map construction (which is done on the CPU in latest [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) V0.4.3). In addition, we support more general 3D modules such as [Sparse Point-Voxel Convolution](https://arxiv.org/abs/2007.16100) with torchsparse.
-
-<img src="https://hanlab.mit.edu/projects/spvnas/figures/spvconv.png" width="1080">
+The major advantage of this library is that we support all computation on the GPU, especially the kernel map construction (which is done on the CPU in latest [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) V0.4.3).
 
 ## Installation
 
