@@ -1,25 +1,10 @@
 # torchsparse: High-Performance Computing Library for Efficient 3D Sparse Convolution
 
-```bibtex
-@inproceedings{
-  tang2020searching,
-  title = {Searching Efficient 3D Architectures with Sparse Point-Voxel Convolution},
-  author = {Tang, Haotian* and Liu, Zhijian* and Zhao, Shengyu and Lin, Yujun and Lin, Ji and Wang, Hanrui and Han, Song},
-  booktitle = {European Conference on Computer Vision},
-  year = {2020}
-}
-```
-
-
-
 ## News
 
 [**New**] 2020/09/20: We released `torchsparse` v1.1, which is significantly faster than our `torchspare` v1.0 and is also achieves **1.9x** speedup over [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) v0.5 alpha when running MinkUNet18C!
 
 2020/08/30: We released `torchsparse` v1.0.
-
-
-
 
 ## Overview
 
@@ -30,8 +15,6 @@ We release `torchsparse`, a high-performance computing library for efficient 3D 
 The major advantage of this library is that we support all computation on the GPU, especially the kernel map construction (which is done on the CPU in latest [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) V0.4.3). In addition, we support more general 3D modules such as [Sparse Point-Voxel Convolution](https://arxiv.org/abs/2007.16100) with torchsparse.
 
 <img src="https://hanlab.mit.edu/projects/spvnas/figures/spvconv.png" width="1080">
-
-
 
 ## Installation
 
@@ -49,11 +32,7 @@ sudo apt-get install libsparsehash-dev
 
 on Ubuntu servers. If you are not sudo, please clone Google's codebase, compile it and install locally. Finally, add the path to this library to your `CPLUS_INCLUDE_PATH` environmental variable.
 
-
-
 For GPU server users, we currently support PyTorch 1.6.0 + CUDA 10.2 + CUDNN 7.6.2. For CPU users, we support PyTorch 1.6.0 (CPU version), MKLDNN backend is optional.
-
-
 
 ## Usage
 
@@ -61,13 +40,9 @@ Our [SPVNAS](https://github.com/mit-han-lab/e3d) project (ECCV2020) is built wit
 
 Here, we also provide a walk-through on some important concepts in torchsparse.
 
-
-
 ### Sparse Tensor and Point Tensor
 
 In torchsparse, we have two data structures for point cloud storage, namely `torchsparse.SparseTensor` and `torchsparse.PointTensor`. Both structures has two data fields `C` (coordinates) and `F` (features). In `SparseTensor`, we assume that all coordinates are **integer** and **do not duplicate**. However, in `PointTensor`, all coordinates are **floating-point** and can duplicate.
-
-
 
 ### Sparse Quantize and Sparse Collate
 
@@ -79,15 +54,9 @@ inds, labels, inverse_map = sparse_quantize(pc, feat, labels, return_index=True,
 
 where `pc`, `feat`, `labels` corresponds to point cloud (coordinates, should be integer), feature and ground-truth. The `inds` denotes unique indices in the point cloud coordinates, and `inverse_map` denotes the unique index each point is corresponding to. The `inverse map` is used to restore full point cloud prediction from downsampled prediction.
 
-
-
 To combine a list of `SparseTensor`s to a batch, you may want to use the `torchsparse.utils.sparse_collate_fn` function. 
 
-
-
 Detailed results are given in [SemanticKITTI dataset preprocessing code](https://github.com/mit-han-lab/e3d/blob/master/spvnas/core/datasets/semantic_kitti.py) in our [SPVNAS](https://github.com/mit-han-lab/e3d) project.
-
-
 
 ### Computation API
 
@@ -157,8 +126,19 @@ We benchmark the performance of our torchsparse and latest [MinkowskiEngine V0.4
 | MinkUNet18C (MACs / 2.5) |        269.6        |            214.3             |
 |       MinkUNet18C        |        323.5        |            294.0             |
 
+## Citation
 
+If you find this code useful, please consider citing:
 
+```bibtex
+@inproceedings{
+  tang2020searching,
+  title = {Searching Efficient 3D Architectures with Sparse Point-Voxel Convolution},
+  author = {Tang, Haotian* and Liu, Zhijian* and Zhao, Shengyu and Lin, Yujun and Lin, Ji and Wang, Hanrui and Han, Song},
+  booktitle = {European Conference on Computer Vision},
+  year = {2020}
+}
+```
 
 ## Acknowledgements
 
