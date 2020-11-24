@@ -1,8 +1,8 @@
-# torchsparse: High-Performance Computing Library for Efficient 3D Sparse Convolution
+# TorchSparse
 
 ## News
 
-[**New**] 2020/09/20: We released `torchsparse` v1.1, which is significantly faster than our `torchspare` v1.0 and is also achieves **1.9x** speedup over [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) v0.5 alpha when running MinkUNet18C!
+2020/09/20: We released `torchsparse` v1.1, which is significantly faster than our `torchspare` v1.0 and is also achieves **1.9x** speedup over [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) v0.5 alpha when running MinkUNet18C!
 
 2020/08/30: We released `torchsparse` v1.0.
 
@@ -87,8 +87,6 @@ where we need to define `inputs`(SparseTensor), `kernel` (of shape k^3 x OC x IC
 
 Detailed examples are given in [here](https://github.com/mit-han-lab/e3d/blob/master/spvnas/core/modules/dynamic_sparseop.py), where we use the `torchsparse.nn.functional` interfaces to implement weight-shared 3D-NAS modules.
 
-
-
 ### Sparse Hashmap API
 
 Sparse hash map query is important in 3D sparse computation. It is mainly used to infer a point's memory location (*i.e.* index) given its coordinates. For example, we use this operation in kernel map construction part of 3D sparse convolution, and also sparse voxelization / devoxelization in [Sparse Point-Voxel Convolution](https://arxiv.org/abs/2007.16100). Here, we provide the following example for hash map API:
@@ -101,8 +99,6 @@ idx_query = torchsparse.nn.functional.sphashquery(source_hash, target_hash)
 
 In this example, `sphash` is the function converting integer coordinates to hashing. The `sphashquery(source_hash, target_hash)` performs the hash table lookup. Here, the hash map has key `target_hash` and value corresponding to point indices in the target point cloud tensor. For each point in the `source_coords`, we find the point index in `target_coords` which has the same coordinate as it.
 
-
-
 ### Dummy Training Example
 
 We here provides an entire training example with dummy input [here](examples/example.py). In this example, we cover 
@@ -112,7 +108,6 @@ We here provides an entire training example with dummy input [here](examples/exa
 - How to train a semantic segmentation SparseConvNet.
 
 You are also welcomed to check out our [SPVNAS](https://github.com/mit-han-lab/e3d) project to implement training / inference with real data.
-
 
 
 ## Speed Comparison Between torchsparse and MinkowskiEngine
