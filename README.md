@@ -2,7 +2,7 @@
 
 ## News
 
-2020/09/20: We released `torchsparse` v1.1, which is significantly faster than our `torchspare` v1.0 and is also achieves **1.9x** speedup over [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) v0.5 alpha when running MinkUNet18C!
+2020/09/20: We released `torchsparse` v1.1, which is significantly faster than our `torchsparse` v1.0 and is also achieves **1.9x** speedup over [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) v0.5 alpha when running MinkUNet18C!
 
 2020/08/30: We released `torchsparse` v1.0.
 
