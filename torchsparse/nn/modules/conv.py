@@ -25,8 +25,16 @@ class Conv3d(nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.dilation = dilation
+        if not isinstance(kernel_size, (list, tuple)):
+            self.kernel_volume = self.kernel_size ** 3
+        else:
+            if len(self.kernel_size) == 3:
+                self.kernel_volume = self.kernel_size[0]*self.kernel_size[1]*self.kernel_size[2]
+            else:
+                raise ValueError("kernel_size must be either an integer of a 3 dimensional tuple")
+
         self.kernel = nn.Parameter(
-            torch.zeros(self.kernel_size ** 3, inc,
+            torch.zeros(self.kernel_volume, inc,
                         outc)) if self.kernel_size > 1 else nn.Parameter(
                             torch.zeros(inc, outc))
         self.bias = None if not bias else nn.Parameter(torch.zeros(outc))
@@ -57,7 +65,8 @@ class Conv3d(nn.Module):
     def forward(self, inputs):
         return conv3d(inputs,
                       self.kernel,
-                      self.bias,
+                      ks=self.kernel_size,
+                      bias=self.bias,
                       stride=self.stride,
                       dilation=self.dilation,
                       transpose=self.t)
