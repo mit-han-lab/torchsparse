@@ -121,12 +121,10 @@ class SpConvolution(Function):
 sparseconv_op = SpConvolution.apply
 
 
-def conv3d(inputs, kernel, bias=None, stride=1, dilation=1, transpose=False):
+def conv3d(inputs, kernel, ks=3, bias=None, stride=1, dilation=1, transpose=False,):
     features = inputs.F
     coords = inputs.C
     cur_stride = inputs.s
-    ks = 1 if len(kernel.shape) == 2 else int(
-        round(kernel.shape[0] ** (1 / 3.)))
     if ks == 1:
         output_features = features.matmul(kernel)
         if bias is not None:
@@ -138,7 +136,7 @@ def conv3d(inputs, kernel, bias=None, stride=1, dilation=1, transpose=False):
 
     elif not transpose:
         kernel_map = inputs.kernel_maps.get(
-            'k%d_os%d_s%d_d%d' % (ks, cur_stride, stride, dilation), None)
+            'k%s_os%d_s%d_d%d' % (ks, cur_stride, stride, dilation), None)
 
         if stride > 1:
             # do downsample
@@ -160,7 +158,7 @@ def conv3d(inputs, kernel, bias=None, stride=1, dilation=1, transpose=False):
             output_tensor.coord_maps = copy.deepcopy(inputs.coord_maps)
             output_tensor.check()
             output_tensor.kernel_maps = copy.deepcopy(inputs.kernel_maps)
-            output_tensor.kernel_maps['k%d_os%d_s%d_d%d' %
+            output_tensor.kernel_maps['k%s_os%d_s%d_d%d' %
                                       (ks, cur_stride, stride,
                                        dilation)] = idx_query + [sizes]
 
@@ -189,7 +187,7 @@ def conv3d(inputs, kernel, bias=None, stride=1, dilation=1, transpose=False):
                 output_tensor.coord_maps = inputs.coord_maps
                 output_tensor.check()
                 output_tensor.kernel_maps = copy.deepcopy(inputs.kernel_maps)
-                output_tensor.kernel_maps['k%d_os%d_s%d_d%d' %
+                output_tensor.kernel_maps['k%s_os%d_s%d_d%d' %
                                           (ks, cur_stride, stride,
                                            dilation)] = idx_query + [sizes]
             else:
@@ -208,7 +206,7 @@ def conv3d(inputs, kernel, bias=None, stride=1, dilation=1, transpose=False):
         # do upsample
         original_stride = int(cur_stride / stride)
         kernel_map = inputs.kernel_maps.get(
-            'k%d_os%d_s%d_d%d' % (ks, original_stride, stride, dilation), None)
+            'k%s_os%d_s%d_d%d' % (ks, original_stride, stride, dilation), None)
         output_features = sparseconv_op(features, kernel, kernel_map[0],
                                         kernel_map[1], kernel_map[2],
                                         transpose)
