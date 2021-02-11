@@ -48,9 +48,9 @@ class KernelRegion:
             self.kernel_offset = torch.from_numpy(kernel_offset).int()
         else:
             if dim == [0,1,2] and len(kernel_size) ==3:            
-                kernel_x_size = kernel_size[0] if 0 in dim else 1
-                kernel_y_size = kernel_size[1] if 1 in dim else 1
-                kernel_z_size = kernel_size[2] if 2 in dim else 1
+                kernel_x_size = kernel_size[0]
+                kernel_y_size = kernel_size[1]
+                kernel_z_size = kernel_size[2]
 
                 x_offset = (
                     np.arange(-kernel_x_size // 2 + 1, kernel_x_size // 2 + 1) *
