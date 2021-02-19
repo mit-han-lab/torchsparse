@@ -23,5 +23,5 @@ class KernelRegion:
             for k in range(3)
         ]
         offsets = [[x, y, z] for x in offsets[0] for y in offsets[1]
-                   for z in offsets[1]]
+                   for z in offsets[2]]
         self.offsets = torch.tensor(offsets, dtype=torch.int)
