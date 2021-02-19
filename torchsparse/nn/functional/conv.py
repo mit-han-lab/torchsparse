@@ -1,9 +1,8 @@
 import copy
 
 import torch
-from torch.autograd import Function
-
 import torchsparse_cuda
+from torch.autograd import Function
 from torchsparse import *
 from torchsparse.nn.functional.convert_neighbor_map import *
 from torchsparse.nn.functional.downsample import *
@@ -23,24 +22,6 @@ class SpConvolution(Function):
                 neighbor_offset,
                 sizes,
                 transpose=False):
-        # type(Any, torch.Tensor, torch.Tensor, torch.Tensor) -> Torch.Tensor
-        r"""
-        Parameters
-        ----------
-        features : torch.FloatTensor
-            (N, c_in) Features of the input point cloud.
-        kernel : torch.FloatTensor
-            (K, c_in, c_out) Kernel. with K to be kernel volume.
-        neighbor_map: torch.IntTensor
-            (K, N) K-volumetric neighborhood of each point.
-            For entries with value -1, it means that this neighbor is inexistent.
-        
-        
-        Returns
-        -------
-        torch.FloatTensor
-            (N, c_out) The output tensor.
-        """
         features = features.contiguous()
         kernel = kernel.contiguous()
         if not transpose:
@@ -83,24 +64,6 @@ class SpConvolution(Function):
 
     @staticmethod
     def backward(ctx, grad_out):
-        # type: (Any, torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-        r"""
-        Parameters
-        ----------
-        grad_out : torch.FloatTensor
-            (N, c_out) tensor with gradients of ouputs
-
-        Returns
-        -------
-        grad_features : torch.FloatTensor
-            (N, c_in) tensor with gradients of features.
-
-        grad_kernel: torch.FloatTensor
-            (K, c_in, c_out) tensor with gradients of the kernel.
-
-        None
-        """
-
         features, kernel, neighbor_map, neighbor_offset, transpose = ctx.for_backwards
         K, c_in, c_out = kernel.size()
         N_in = features.size(0)
@@ -121,7 +84,13 @@ class SpConvolution(Function):
 sparseconv_op = SpConvolution.apply
 
 
-def conv3d(inputs, kernel, ks=3, bias=None, stride=1, dilation=1, transpose=False,):
+def conv3d(inputs,
+           kernel,
+           ks=3,
+           bias=None,
+           stride=1,
+           dilation=1,
+           transpose=False):
     features = inputs.F
     coords = inputs.C
     cur_stride = inputs.s
@@ -171,7 +140,7 @@ def conv3d(inputs, kernel, ks=3, bias=None, stride=1, dilation=1, transpose=Fals
                     kOffset = kRegion.get_kernel_offset().to(features.device)
                 except:
                     print(features)
-                    assert 0
+                    raise
                 hash_query = sphash(coords, kOffset)
                 hash_target = sphash(coords)
                 idx_query = sphashquery(hash_query, hash_target)

@@ -1,4 +1,5 @@
 from .activation import *
+from .conv import *
 from .convert_neighbor_map import *
 from .count import *
 from .crop import *
@@ -7,5 +8,4 @@ from .downsample import *
 from .hash import *
 from .pooling import *
 from .query import *
-from .sparseconv import *
 from .voxelize import *

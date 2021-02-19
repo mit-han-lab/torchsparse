@@ -17,9 +17,8 @@
 #include "others/query_gpu.h"
 #include "others/count_cpu_header.h"
 
-
-
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
+{
     m.def("sparseconv_cpu_forward", &ConvolutionForwardCPU, "point cloud convolution forward (CPU)");
     m.def("sparseconv_cpu_backward", &ConvolutionBackwardCPU, "point cloud convolution backward (CPU)");
     m.def("cpu_kernel_hash_forward", &cpu_kernel_hash_forward, "Kernel Hashing forward (CPU)");
@@ -46,8 +45,4 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("cpu_insertion_backward", &cpu_insertion_backward, "Insertion backward (CPU)");
     m.def("query_forward", &query_forward, "hash query forward (CUDA)");
     m.def("convert_map_forward", &convert_map_forward, "Convert neighbor map forward (CUDA)");
-    
 }
-
-
-

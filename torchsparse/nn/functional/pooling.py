@@ -1,7 +1,4 @@
 import torch
-from torch.nn import functional as F
-
-from torchsparse.sparse_tensor import *
 
 __all__ = ['global_avg_pool', 'global_max_pool']
 

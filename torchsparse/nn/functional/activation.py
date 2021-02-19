@@ -1,21 +1,20 @@
 import functools
 
 from torch.nn import functional as F
-
 from torchsparse.sparse_tensor import *
 
 __all__ = ['spact', 'sprelu', 'spleaky_relu']
 
 
 def spact(inputs, act_funct=F.relu):
-    features = inputs.F
+    feats = inputs.F
     coords = inputs.C
-    cur_stride = inputs.s
-    output_features = act_funct(features)
-    output_tensor = SparseTensor(output_features, coords, cur_stride)
-    output_tensor.coord_maps = inputs.coord_maps
-    output_tensor.kernel_maps = inputs.kernel_maps
-    return output_tensor
+    stride = inputs.s
+    output_features = act_funct(feats)
+    outputs = SparseTensor(output_features, coords, stride)
+    outputs.coord_maps = inputs.coord_maps
+    outputs.kernel_maps = inputs.kernel_maps
+    return outputs
 
 
 def sprelu(inputs, inplace=True):

@@ -1,7 +1,6 @@
 import torch
-from torch.autograd import Function
-
 import torchsparse_cuda
+from torch.autograd import Function
 
 
 class ConvertNeighborMap(Function):

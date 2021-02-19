@@ -1,13 +1,6 @@
-import os
-import sys
-import time
-
 import torch
-import torch.nn as nn
-from torch.autograd import Function
-from torch.utils.cpp_extension import load
-
 import torchsparse_cuda
+from torch.autograd import Function
 
 __all__ = ['spdevoxelize', 'calc_ti_weights']
 

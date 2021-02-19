@@ -1,6 +1,5 @@
-from torch.autograd import Function
-
 import torchsparse_cuda
+from torch.autograd import Function
 
 __all__ = ['sphash']
 
@@ -35,12 +34,8 @@ class KernelHashGPU(Function):
                 koffset.int().contiguous().cpu()).to(device)
 
 
-hash_gpu = HashGPU.apply
-kernel_hash_gpu = KernelHashGPU.apply
-
-
 def sphash(idx, koffset=None):
     if koffset is None:
-        return hash_gpu(idx)
+        return HashGPU.apply(idx)
     else:
-        return kernel_hash_gpu(idx, koffset)
+        return KernelHashGPU.apply(idx, koffset)

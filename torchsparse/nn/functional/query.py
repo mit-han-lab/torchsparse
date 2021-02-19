@@ -1,7 +1,6 @@
 import torch
-from torch.autograd import Function
-
 import torchsparse_cuda
+from torch.autograd import Function
 
 __all__ = ['sphashquery']
 
@@ -10,9 +9,8 @@ class SparseQuery(Function):
     @staticmethod
     def forward(ctx, hash_query, hash_target):
         if len(hash_query.size()) == 2:
-            N, C = hash_query.size()
+            C = hash_query.size(1)
         else:
-            N = hash_query.size(0)
             C = 1
 
         idx_target = torch.arange(len(hash_target),
@@ -38,8 +36,5 @@ class SparseQuery(Function):
         return (out - 1)
 
 
-sparse_hash_query = SparseQuery.apply
-
-
 def sphashquery(hash_query, hash_target):
-    return sparse_hash_query(hash_query, hash_target)
+    return SparseQuery.apply(hash_query, hash_target)

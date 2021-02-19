@@ -1,6 +1,5 @@
-from torch.autograd import Function
-
 import torchsparse_cuda
+from torch.autograd import Function
 from torchsparse.nn.functional.hash import *
 
 __all__ = ['spvoxelize']
@@ -22,8 +21,5 @@ class VoxelizeGPU(Function):
         return bottom_grad, None, None
 
 
-voxelize_gpu = VoxelizeGPU.apply
-
-
 def spvoxelize(feat, idx, cnt):
-    return voxelize_gpu(feat, idx, cnt)
+    return VoxelizeGPU.apply(feat, idx, cnt)

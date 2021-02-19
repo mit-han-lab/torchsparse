@@ -1,9 +1,7 @@
-import os.path
 from collections import Sequence
 
 import numpy as np
 import torch
-
 from torchsparse import SparseTensor
 
 

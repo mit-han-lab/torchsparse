@@ -1,6 +1,5 @@
-from torch.autograd import Function
-
 import torchsparse_cuda
+from torch.autograd import Function
 
 __all__ = ['spcount']
 
@@ -15,8 +14,5 @@ class CountGPU(Function):
         return outs
 
 
-count_gpu = CountGPU.apply
-
-
 def spcount(idx, num):
-    return count_gpu(idx, num)
+    return CountGPU.apply(idx, num)

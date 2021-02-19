@@ -1,7 +1,6 @@
 import torch
-from torch.autograd import Function
-
 import torchsparse_cuda
+from torch.autograd import Function
 from torchsparse.nn.functional.hash import *
 
 __all__ = ['spdownsample']
@@ -10,19 +9,6 @@ __all__ = ['spdownsample']
 class DownsampleGPU(Function):
     @staticmethod
     def forward(ctx, coords, ratio):
-        '''
-        Inputs:
-        coords: torch.Int32 tensor, N x 4
-        ratio: float, downsample ratio
-        Outputs:
-        coords_downsampled: torch.Int32 tensor, M x 4
-        Algorithm: 
-        Using torch.unique to get **inverse** indices
-        Then use the insertion kernel.
-        TBD:
-        The insertion kernel w/o atomic op.
-        '''
-        #coords = coords.to('cpu')
         coords_float = coords[:, :3].float()
         # following Minkowski engine
         coords_new = torch.floor(torch.floor(coords_float / ratio) *

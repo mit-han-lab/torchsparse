@@ -1,7 +1,6 @@
 import functools
 
 from torch import nn
-
 from torchsparse.sparse_tensor import *
 
 from ..functional import *

@@ -4,30 +4,26 @@
 #include <vector>
 
 //CUDA forward declarations
-void devoxelize_wrapper(int N, int c, const int * indices, const float * weight, const float * feat, float * out);
-void devoxelize_grad_wrapper(int N, int n, int c, const int * indices, const float * weight, const float * top_grad, float * bottom_grad);
-void deterministic_devoxelize_wrapper(int N, int c, const int * indices, const float * weight, const float * feat, float * out);
-void deterministic_devoxelize_grad_wrapper(int N, int n, int c, const int * indices, const float * weight, const float * top_grad, int * bottom_grad);
+void devoxelize_wrapper(int N, int c, const int *indices, const float *weight, const float *feat, float *out);
+void devoxelize_grad_wrapper(int N, int n, int c, const int *indices, const float *weight, const float *top_grad, float *bottom_grad);
+void deterministic_devoxelize_wrapper(int N, int c, const int *indices, const float *weight, const float *feat, float *out);
+void deterministic_devoxelize_grad_wrapper(int N, int n, int c, const int *indices, const float *weight, const float *top_grad, int *bottom_grad);
 at::Tensor devoxelize_forward(
     const at::Tensor feat,
     const at::Tensor indices,
-    const at::Tensor weight
-);
+    const at::Tensor weight);
 at::Tensor devoxelize_backward(
     const at::Tensor top_grad,
     const at::Tensor indices,
     const at::Tensor weight,
-    int n
-);
+    int n);
 at::Tensor deterministic_devoxelize_forward(
     const at::Tensor feat,
     const at::Tensor indices,
-    const at::Tensor weight
-);
+    const at::Tensor weight);
 at::Tensor deterministic_devoxelize_backward(
     const at::Tensor top_grad,
     const at::Tensor indices,
     const at::Tensor weight,
-    int n
-);
+    int n);
 #endif

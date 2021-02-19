@@ -1,6 +1,5 @@
 from .activation import *
-from .batchnorm import *
 from .conv import *
 from .crop import *
-from .layernorm import *
+from .norm import *
 from .pooling import *
