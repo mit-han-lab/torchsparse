@@ -28,7 +28,7 @@ class Conv3d(nn.Module):
         self.dilation = dilation
         if not isinstance(kernel_size, (list, tuple)):
             self.kernel_volume = self.kernel_size ** 3
-            self.kernel = nn.Parameter(
+            self.weight = nn.Parameter(
                 torch.zeros(self.kernel_volume, inc,
                             outc)) if self.kernel_size > 1 else nn.Parameter(
                                 torch.zeros(inc, outc))
@@ -36,7 +36,7 @@ class Conv3d(nn.Module):
             if len(self.kernel_size) == 3:
                 self.kernel_volume = self.kernel_size[0] * self.kernel_size[
                     1] * self.kernel_size[2]
-                self.kernel = nn.Parameter(
+                self.weight = nn.Parameter(
                     torch.zeros(self.kernel_volume, inc, outc))
             else:
                 raise ValueError(
@@ -45,7 +45,7 @@ class Conv3d(nn.Module):
 
         self.bias = None if not bias else nn.Parameter(torch.zeros(outc))
         self.t = transpose
-        self.init_weight()
+        self.reset_parameters()
 
         if kernel_size == 1:
             assert not transpose
@@ -60,17 +60,17 @@ class Conv3d(nn.Module):
                 self.in_channels, self.out_channels, self.kernel_size,
                 self.stride, self.dilation)
 
-    def init_weight(self):
+    def reset_parameters(self):
         std = 1. / math.sqrt(
             self.out_channels if self.t else self.in_channels *
             (self.kernel_volume))
-        self.kernel.data.uniform_(-std, std)
+        self.weight.data.uniform_(-std, std)
         if self.bias is not None:
             self.bias.data.uniform_(-std, std)
 
     def forward(self, inputs):
         return conv3d(inputs,
-                      self.kernel,
+                      self.weight,
                       ks=self.kernel_size,
                       bias=self.bias,
                       stride=self.stride,
@@ -105,14 +105,14 @@ class ToBEVConvolution(nn.Module):
                  out_channels: int,
                  n_kernels: int,
                  stride: int = 1,
-                 z_dim: int = 1,
+                 dim: int = 1,
                  bias: bool = False) -> None:
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.n_kernels = n_kernels
         self.stride = stride
-        self.z_dim = z_dim
+        self.dim = dim
         self.weight = nn.Parameter(
             torch.zeros(n_kernels, in_channels, out_channels))
         self.bias = nn.Parameter(torch.zeros(1, out_channels)) if bias else 0
@@ -131,10 +131,10 @@ class ToBEVConvolution(nn.Module):
         ratio = stride * self.stride
 
         kernels = torch.index_select(self.weight, 0,
-                                     coords[:, self.z_dim].long() / stride)
+                                     coords[:, self.dim].long() / stride)
         feats = (feats.unsqueeze(-1) * kernels).sum(1) + self.bias
         coords = coords.t().long()
-        coords[self.z_dim, :] = 0
+        coords[self.dim, :] = 0
         if self.stride > 1:
             coords[:3] /= ratio
             coords[:3] *= ratio
@@ -149,15 +149,15 @@ class ToDenseBEVConvolution(nn.Module):
                  out_channels: int,
                  shape,
                  offset: list = [0, 0, 0],
-                 z_dim: int = 1,
+                 dim: int = 1,
                  bias: bool = False) -> None:
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.offset = torch.cuda.IntTensor([list(offset) + [0]])
-        self.z_dim = z_dim
-        self.n_kernels = int(shape[self.z_dim])
-        self.bev_dims = [i for i in range(3) if i != self.z_dim]
+        self.dim = dim
+        self.n_kernels = int(shape[self.dim])
+        self.bev_dims = [i for i in range(3) if i != self.dim]
         self.bev_shape = shape[self.bev_dims]
         self.weight = nn.Parameter(
             torch.zeros(self.n_kernels, in_channels, out_channels))
@@ -175,14 +175,14 @@ class ToDenseBEVConvolution(nn.Module):
     def forward(self, inputs: SparseTensor):
         coords, feats, stride = inputs.C, inputs.F, inputs.s
 
-        weight = torch.index_select(
-            self.weight, 0, (coords[:, self.z_dim].long() / stride).long())
+        weight = torch.index_select(self.weight, 0,
+                                    (coords[:, self.dim] / stride).long())
         feats = (feats.unsqueeze(-1) * weight).sum(1) + self.bias
         coords = (coords - self.offset).t()[[3] + self.bev_dims].long()
         coords[1:] = (coords[1:] / stride).long()
         indices = coords[0] * int(self.bev_shape.prod()) + coords[1] * int(
             self.bev_shape[1]) + coords[2]
-        batch_size = indices[0].max().item() + 1
+        batch_size = coords[0].max().item() + 1
         outputs = torch.cuda.sparse.FloatTensor(
             indices.unsqueeze(0),
             feats,
@@ -190,6 +190,6 @@ class ToDenseBEVConvolution(nn.Module):
                 [batch_size * int(self.bev_shape.prod()),
                  feats.size(-1)]),
         ).to_dense()
-        outputs = outputs.view(batch_size, *self.bev_shape,
-                               -1).permute(0, 3, 1, 2).contiguous()
+        outputs = outputs.view(batch_size, *self.bev_shape, -1)
+        outputs = outputs.permute(0, 3, 1, 2).contiguous()
         return outputs
