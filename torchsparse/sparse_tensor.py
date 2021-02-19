@@ -4,10 +4,10 @@ __all__ = ['SparseTensor']
 
 
 class SparseTensor:
-    def __init__(self, feats, coords, cur_tensor_stride=1):
+    def __init__(self, feats, coords, stride=1):
         self.F = feats
         self.C = coords
-        self.s = cur_tensor_stride
+        self.s = stride
         self.coord_maps = {}
         self.kernel_maps = {}
 
