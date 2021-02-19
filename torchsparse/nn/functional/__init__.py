@@ -3,9 +3,7 @@ from .conv import *
 from .convert_neighbor_map import *
 from .count import *
 from .crop import *
-from .devox import *
 from .downsample import *
 from .hash import *
 from .pooling import *
-from .query import *
-from .voxelize import *
+from .rasterize import *

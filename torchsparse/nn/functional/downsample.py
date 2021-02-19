@@ -1,12 +1,12 @@
 import torch
-import torchsparse_cuda
+import torchsparse_backend
 from torch.autograd import Function
 from torchsparse.nn.functional.hash import *
 
 __all__ = ['spdownsample']
 
 
-class DownsampleGPU(Function):
+class Downsample(Function):
     @staticmethod
     def forward(ctx, coords, ratio):
         coords_float = coords[:, :3].float()
@@ -24,16 +24,16 @@ class DownsampleGPU(Function):
         # gpu
         if 'cuda' in str(coords.device):
             uq_coords = torch.round(
-                torchsparse_cuda.insertion_forward(coords_new.float(), inv,
-                                                   cnt))
+                torchsparse_backend.insertion_forward(coords_new.float(), inv,
+                                                      cnt))
         elif 'cpu' in str(coords.device):
             uq_coords = torch.round(
-                torchsparse_cuda.cpu_insertion_forward(coords_new.float(), inv,
-                                                       cnt))
+                torchsparse_backend.cpu_insertion_forward(
+                    coords_new.float(), inv, cnt))
         else:
             device = coords.device
             uq_coords = torch.round(
-                torchsparse_cuda.cpu_insertion_forward(
+                torchsparse_backend.cpu_insertion_forward(
                     coords_new.float().cpu(), inv.cpu(), cnt.cpu()))
             uq_coords = uq_coords.to(device)
         uq_coords = uq_coords.int()
@@ -42,8 +42,5 @@ class DownsampleGPU(Function):
         return uq_coords  #, coords_new_hash
 
 
-downsample_gpu = DownsampleGPU.apply
-
-
 def spdownsample(coords, ratio):
-    return downsample_gpu(coords, ratio)
+    return Downsample.apply(coords, ratio)

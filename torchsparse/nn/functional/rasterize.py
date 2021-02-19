@@ -1,8 +1,30 @@
 import torch
-import torchsparse_cuda
+import torchsparse_backend
 from torch.autograd import Function
+from torchsparse.nn.functional.hash import *
 
-__all__ = ['spdevoxelize', 'calc_ti_weights']
+__all__ = ['spvoxelize', 'spdevoxelize', 'calc_ti_weights']
+
+
+class Rasterize(Function):
+    @staticmethod
+    def forward(ctx, feat, idx, cnt):
+        out = torchsparse_backend.insertion_forward(feat.float().contiguous(),
+                                                    idx.int().contiguous(),
+                                                    cnt)
+        ctx.for_backwards = (idx.int().contiguous(), cnt, feat.shape[0])
+        return out
+
+    @staticmethod
+    def backward(ctx, top_grad):
+        idx, cnt, N = ctx.for_backwards
+        bottom_grad = torchsparse_backend.insertion_backward(
+            top_grad.float().contiguous(), idx, cnt, N)
+        return bottom_grad, None, None
+
+
+def spvoxelize(feat, idx, cnt):
+    return Rasterize.apply(feat, idx, cnt)
 
 
 def calc_ti_weights(pc, idx_query, scale=1.0):
@@ -59,15 +81,15 @@ def calc_ti_weights(pc, idx_query, scale=1.0):
     return all_weights
 
 
-class DevoxelizationGPU(Function):
+class Derasterize(Function):
     @staticmethod
     def forward(ctx, feat, indices, weights):
         if 'cuda' in str(feat.device):
-            out = torchsparse_cuda.devoxelize_forward(
+            out = torchsparse_backend.devoxelize_forward(
                 feat.contiguous(),
                 indices.contiguous().int(), weights.contiguous())
         else:
-            out = torchsparse_cuda.cpu_devoxelize_forward(
+            out = torchsparse_backend.cpu_devoxelize_forward(
                 feat.contiguous(),
                 indices.contiguous().int(), weights.contiguous())
 
@@ -81,17 +103,14 @@ class DevoxelizationGPU(Function):
         indices, weights, n = ctx.for_backwards
 
         if 'cuda' in str(grad_out.device):
-            grad_features = torchsparse_cuda.devoxelize_backward(
+            grad_features = torchsparse_backend.devoxelize_backward(
                 grad_out.contiguous(), indices, weights, n)
         else:
-            grad_features = torchsparse_cuda.cpu_devoxelize_backward(
+            grad_features = torchsparse_backend.cpu_devoxelize_backward(
                 grad_out.contiguous(), indices, weights, n)
 
         return grad_features, None, None
 
 
-devoxelize = DevoxelizationGPU.apply
-
-
 def spdevoxelize(feat, indices, weights):
-    return devoxelize(feat, indices, weights)
+    return Derasterize.apply(feat, indices, weights)

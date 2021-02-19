@@ -21,7 +21,7 @@ class Activation(nn.Module):
 class ReLU(Activation):
     def __init__(self, inplace: bool = True) -> None:
         super().__init__()
-        self.activation = functools.partial(sprelu, inplace=inplace)
+        self.activation = functools.partial(relu, inplace=inplace)
 
     def __repr__(self):
         if self.inplace:
@@ -34,7 +34,7 @@ class LeakyReLU(Activation):
     def __init__(self, negative_slope: float = 0.1,
                  inplace: bool = True) -> None:
         super().__init__()
-        self.activation = functools.partial(spleaky_relu,
+        self.activation = functools.partial(leaky_relu,
                                             negative_slope=negative_slope,
                                             inplace=inplace)
         self.negative_slope = negative_slope

@@ -62,10 +62,10 @@ The computation interface in torchsparse is straightforward and very similar to 
 
 ```python
 class BasicConvolutionBlock(nn.Module):
-    def __init__(self, inc, outc, ks=3, stride=1, dilation=1):
+    def __init__(self, inc, outc, kernel_size, stride=1, dilation=1):
         super().__init__()
         self.net = nn.Sequential(
-            spnn.Conv3d(inc, outc, kernel_size=ks, dilation=dilation, stride=stride),
+            spnn.Conv3d(inc, outc, kernel_size, dilation=dilation, stride=stride),
             spnn.BatchNorm(outc),
             spnn.ReLU(True)
         )

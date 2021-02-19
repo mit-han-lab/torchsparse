@@ -1,18 +1,18 @@
-import torchsparse_cuda
+import torchsparse_backend
 from torch.autograd import Function
 
-__all__ = ['spcount']
+__all__ = ['count']
 
 
-class CountGPU(Function):
+class Count(Function):
     @staticmethod
     def forward(ctx, idx, num):
         if 'cuda' in str(idx.device):
-            outs = torchsparse_cuda.count_forward(idx.contiguous(), num)
+            outs = torchsparse_backend.count_forward(idx.contiguous(), num)
         else:
-            outs = torchsparse_cuda.cpu_count_forward(idx.contiguous(), num)
+            outs = torchsparse_backend.cpu_count_forward(idx.contiguous(), num)
         return outs
 
 
-def spcount(idx, num):
-    return CountGPU.apply(idx, num)
+def count(idx, num):
+    return Count.apply(idx, num)

@@ -8,23 +8,20 @@
 #include <cstdio>
 #include <google/dense_hash_map>
 
-
-
-
-class HashTableCPU {
+class HashTableCPU
+{
 
 private:
     google::dense_hash_map<int64_t, int64_t> hashmap;
-    
+
 public:
-    HashTableCPU(){
+    HashTableCPU()
+    {
         //hashmap.set_empty_key(0);
     }
-    ~HashTableCPU(){}
-    int insert_vals(const int64_t * const keys, const int64_t * const vals, const int n);
-    void lookup_vals(const int64_t * const keys, int64_t * const results, const int n);
-
+    ~HashTableCPU() {}
+    int insert_vals(const int64_t *const keys, const int64_t *const vals, const int n);
+    void lookup_vals(const int64_t *const keys, int64_t *const results, const int n);
 };
 
 #endif
-

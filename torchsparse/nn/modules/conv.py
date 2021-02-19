@@ -71,7 +71,7 @@ class Conv3d(nn.Module):
     def forward(self, inputs):
         return conv3d(inputs,
                       self.weight,
-                      ks=self.kernel_size,
+                      kernel_size=self.kernel_size,
                       bias=self.bias,
                       stride=self.stride,
                       dilation=self.dilation,
@@ -87,7 +87,7 @@ class ToBEVReduction(nn.Module):
         return 'ToBEVReduction(dim = %d)' % self.dim
 
     def forward(self, inputs: SparseTensor):
-        coords, feats, stride = inputs.C, inputs.F, inputs.s
+        coords, feats, stride = inputs.coords, inputs.feats, inputs.stride
 
         coords = coords.clone()
         coords[:, self.dim] = 0

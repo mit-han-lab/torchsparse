@@ -3,7 +3,7 @@ import functools
 from torch.nn import functional as F
 from torchsparse.sparse_tensor import *
 
-__all__ = ['spact', 'sprelu', 'spleaky_relu']
+__all__ = ['spact', 'relu', 'leaky_relu']
 
 
 def spact(inputs, act_funct=F.relu):
@@ -17,11 +17,11 @@ def spact(inputs, act_funct=F.relu):
     return outputs
 
 
-def sprelu(inputs, inplace=True):
+def relu(inputs, inplace=True):
     return spact(inputs, functools.partial(F.relu, inplace=inplace))
 
 
-def spleaky_relu(inputs, negative_slope=0.1, inplace=True):
+def leaky_relu(inputs, negative_slope=0.1, inplace=True):
     return spact(
         inputs,
         functools.partial(F.leaky_relu,
