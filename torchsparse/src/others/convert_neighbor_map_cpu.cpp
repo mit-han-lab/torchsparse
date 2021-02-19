@@ -1,5 +1,5 @@
 #include <torch/torch.h>
-#include "convert_neighbor_map_cpu_header.h"
+#include "convert_neighbor_map_cpu.h"
 #include <vector>
 
 void cpu_convert_map_wrapper(int k, int N, int N_nonzero, const int *nmap, const int *idx_batch, const int *idx_point, int *out)

@@ -1,29 +1,24 @@
-import functools
-
 from torch.nn import functional as F
 from torchsparse.sparse_tensor import *
 
-__all__ = ['spact', 'relu', 'leaky_relu']
+__all__ = ['relu', 'leaky_relu']
 
 
-def spact(inputs, act_funct=F.relu):
-    feats = inputs.feats
-    coords = inputs.coords
-    stride = inputs.stride
-    feats = act_funct(feats)
-    outputs = SparseTensor(coords=coords, feats=feats, stride=stride)
+def relu(inputs: SparseTensor, inplace: bool = True) -> SparseTensor:
+    coords, feats, stride = inputs.coords, inputs.feats, inputs.stride
+    feats = F.relu(feats, inplace=inplace)
+    outputs = SparseTensor(coords, feats, stride=stride)
     outputs.coord_maps = inputs.coord_maps
     outputs.kernel_maps = inputs.kernel_maps
     return outputs
 
 
-def relu(inputs, inplace=True):
-    return spact(inputs, functools.partial(F.relu, inplace=inplace))
-
-
-def leaky_relu(inputs, negative_slope=0.1, inplace=True):
-    return spact(
-        inputs,
-        functools.partial(F.leaky_relu,
-                          inplace=inplace,
-                          negative_slope=negative_slope))
+def leaky_relu(inputs: SparseTensor,
+               negative_slope: float = 0.1,
+               inplace: bool = True) -> SparseTensor:
+    coords, feats, stride = inputs.coords, inputs.feats, inputs.stride
+    feats = F.leaky_relu(feats, negative_slope=negative_slope, inplace=inplace)
+    outputs = SparseTensor(coords, feats, stride=stride)
+    outputs.coord_maps = inputs.coord_maps
+    outputs.kernel_maps = inputs.kernel_maps
+    return outputs

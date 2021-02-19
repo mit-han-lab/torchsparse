@@ -1,5 +1,5 @@
 #include <stdexcept>
-#include "hashmap_cpu_header.hpp"
+#include "hashmap_cpu.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <chrono>

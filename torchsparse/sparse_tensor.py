@@ -46,8 +46,8 @@ class SparseTensor:
         return self
 
     def __add__(self, other):
-        tensor = SparseTensor(coords=self.coords,
-                              feats=self.feats + other.feats,
+        tensor = SparseTensor(self.coords,
+                              self.feats + other.feats,
                               stride=self.stride)
         tensor.coord_maps = self.coord_maps
         tensor.kernel_maps = self.kernel_maps

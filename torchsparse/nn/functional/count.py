@@ -1,18 +1,13 @@
 import torchsparse_backend
-from torch.autograd import Function
 
 __all__ = ['count']
 
 
-class Count(Function):
-    @staticmethod
-    def forward(ctx, idx, num):
-        if 'cuda' in str(idx.device):
-            outs = torchsparse_backend.count_forward(idx.contiguous(), num)
-        else:
-            outs = torchsparse_backend.cpu_count_forward(idx.contiguous(), num)
-        return outs
-
-
 def count(idx, num):
-    return Count.apply(idx, num)
+    idx = idx.contiguous()
+    if idx.device.type == 'cuda':
+        return torchsparse_backend.count_forward_cuda(idx, num)
+    elif idx.device.type in ['cpu', 'tpu']:
+        return torchsparse_backend.count_forward_cpu(idx, num)
+    else:
+        raise NotImplementedError

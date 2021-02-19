@@ -23,8 +23,35 @@ class Rasterize(Function):
         return bottom_grad, None, None
 
 
-def spvoxelize(feat, idx, cnt):
-    return Rasterize.apply(feat, idx, cnt)
+class Derasterize(Function):
+    @staticmethod
+    def forward(ctx, feat, indices, weights):
+        if 'cuda' in str(feat.device):
+            out = torchsparse_backend.devoxelize_forward(
+                feat.contiguous(),
+                indices.contiguous().int(), weights.contiguous())
+        else:
+            out = torchsparse_backend.cpu_devoxelize_forward(
+                feat.contiguous(),
+                indices.contiguous().int(), weights.contiguous())
+
+        ctx.for_backwards = (indices.contiguous().int(), weights,
+                             feat.shape[0])
+
+        return out
+
+    @staticmethod
+    def backward(ctx, grad_out):
+        indices, weights, n = ctx.for_backwards
+
+        if 'cuda' in str(grad_out.device):
+            grad_features = torchsparse_backend.devoxelize_backward(
+                grad_out.contiguous(), indices, weights, n)
+        else:
+            grad_features = torchsparse_backend.cpu_devoxelize_backward(
+                grad_out.contiguous(), indices, weights, n)
+
+        return grad_features, None, None
 
 
 def calc_ti_weights(pc, idx_query, scale=1.0):
@@ -81,35 +108,8 @@ def calc_ti_weights(pc, idx_query, scale=1.0):
     return all_weights
 
 
-class Derasterize(Function):
-    @staticmethod
-    def forward(ctx, feat, indices, weights):
-        if 'cuda' in str(feat.device):
-            out = torchsparse_backend.devoxelize_forward(
-                feat.contiguous(),
-                indices.contiguous().int(), weights.contiguous())
-        else:
-            out = torchsparse_backend.cpu_devoxelize_forward(
-                feat.contiguous(),
-                indices.contiguous().int(), weights.contiguous())
-
-        ctx.for_backwards = (indices.contiguous().int(), weights,
-                             feat.shape[0])
-
-        return out
-
-    @staticmethod
-    def backward(ctx, grad_out):
-        indices, weights, n = ctx.for_backwards
-
-        if 'cuda' in str(grad_out.device):
-            grad_features = torchsparse_backend.devoxelize_backward(
-                grad_out.contiguous(), indices, weights, n)
-        else:
-            grad_features = torchsparse_backend.cpu_devoxelize_backward(
-                grad_out.contiguous(), indices, weights, n)
-
-        return grad_features, None, None
+def spvoxelize(feat, idx, cnt):
+    return Rasterize.apply(feat, idx, cnt)
 
 
 def spdevoxelize(feat, indices, weights):

@@ -1,6 +1,6 @@
 #include <torch/torch.h>
 #include <vector>
-#include "hash_cpu_header.h"
+#include "hash_cpu.h"
 
 void cpu_hash_wrapper(int N, const int *data, long *out)
 {

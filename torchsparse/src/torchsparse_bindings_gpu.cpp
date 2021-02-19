@@ -1,21 +1,21 @@
 #include <torch/serialize/tensor.h>
 #include <torch/extension.h>
 #include <pybind11/pybind11.h>
-#include "convolution/convolution_cpu_header.h"
-#include "hash/hash_cpu_header.h"
-#include "others/convert_neighbor_map_cpu_header.h"
-#include "others/insertion_cpu_header.h"
-#include "others/query_cpu_header.h"
+#include "convolution/convolution_cpu.h"
+#include "hash/hash_cpu.h"
+#include "others/convert_neighbor_map_cpu.h"
+#include "others/insertion_cpu.h"
+#include "others/query_cpu.h"
 #include "convolution/convolution_gpu.h"
 #include "hash/hash_gpu.h"
 #include "interpolation/devox_gpu.h"
-#include "interpolation/devox_cpu_header.h"
-#include "others/convert_neighbor_map_gpu.h"
+#include "interpolation/devox_cpu.h"
+#include "others/convert_neighbor_map.h"
 #include "others/count_gpu.h"
 #include "others/insertion_gpu.h"
-#include "others/insertion_cpu_header.h"
+#include "others/insertion_cpu.h"
 #include "others/query_gpu.h"
-#include "others/count_cpu_header.h"
+#include "others/count_cpu.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
@@ -37,8 +37,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
     m.def("deterministic_devoxelize_backward", &deterministic_devoxelize_backward, "Devoxelization backward (CUDA)");
     m.def("cpu_devoxelize_forward", &cpu_devoxelize_forward, "Devoxelization forward (CPU)");
     m.def("cpu_devoxelize_backward", &cpu_devoxelize_backward, "Devoxelization backward (CPU)");
-    m.def("count_forward", &count_forward, "Counting forward (CUDA)");
-    m.def("cpu_count_forward", &cpu_count_forward, "count forward (CPU)");
+    m.def("count_forward_cuda", &count_forward_cuda, "Counting forward (CUDA)");
+    m.def("count_forward_cpu", &count_forward_cpu, "count forward (CPU)");
     m.def("insertion_forward", &insertion_forward, "Insertion forward (CUDA)");
     m.def("insertion_backward", &insertion_backward, "Insertion backward (CUDA)");
     m.def("cpu_insertion_forward", &cpu_insertion_forward, "Insertion forward (CPU)");

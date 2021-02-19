@@ -190,7 +190,7 @@ def sparse_collate(coords,
 def sparse_collate_tensors(sparse_tensors):
     coords, feats = sparse_collate([x.C for x in sparse_tensors],
                                    [x.F for x in sparse_tensors])
-    return SparseTensor(coords=coords, feats=feats, stride=sparse_tensors[0].s)
+    return SparseTensor(coords, feats, stride=sparse_tensors[0].s)
 
 
 def sparse_collate_fn(batch):

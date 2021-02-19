@@ -1,6 +1,6 @@
 #include <torch/torch.h>
 #include <vector>
-#include "devox_cpu_header.h"
+#include "devox_cpu.h"
 
 //make sure indices is int type
 //feat: (b,c,s) indices: (N, 3) batch_index: (N, ) -> out: (N, c)
@@ -10,7 +10,6 @@ at::Tensor cpu_devoxelize_forward(
     const at::Tensor weight)
 {
   int b = feat.size(0);
-  //printf("%d\n", b);
   int c = feat.size(1);
   int N = indices.size(0);
 

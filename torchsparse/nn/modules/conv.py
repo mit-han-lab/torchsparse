@@ -15,7 +15,7 @@ class Conv3d(nn.Module):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: int = 3,
+                 kernel_size: int,
                  stride: int = 1,
                  dilation: int = 1,
                  bias: bool = False,
@@ -44,14 +44,14 @@ class Conv3d(nn.Module):
                 )
 
         self.bias = None if not bias else nn.Parameter(torch.zeros(outc))
-        self.t = transpose
+        self.transpose = transpose
         self.reset_parameters()
 
         if kernel_size == 1:
             assert not transpose
 
     def __repr__(self):
-        if not self.t:
+        if not self.transpose:
             return 'Conv3d(in_channels=%d, out_channels=%d, kernel_size=%d, stride=%d, dilation=%d)' % (
                 self.in_channels, self.out_channels, self.kernel_size,
                 self.stride, self.dilation)
@@ -62,7 +62,7 @@ class Conv3d(nn.Module):
 
     def reset_parameters(self):
         std = 1. / math.sqrt(
-            self.out_channels if self.t else self.in_channels *
+            self.out_channels if self.transpose else self.in_channels *
             (self.kernel_volume))
         self.weight.data.uniform_(-std, std)
         if self.bias is not None:
@@ -75,7 +75,7 @@ class Conv3d(nn.Module):
                       bias=self.bias,
                       stride=self.stride,
                       dilation=self.dilation,
-                      transpose=self.t)
+                      transpose=self.transpose)
 
 
 class ToBEVReduction(nn.Module):
@@ -96,7 +96,7 @@ class ToBEVReduction(nn.Module):
                                                feats).coalesce()
         coords = tensor.indices().t().int()
         feats = tensor.values()[:, 1:] / tensor.values()[:, :1]
-        return SparseTensor(coords=coords, feats=feats, stride=stride)
+        return SparseTensor(coords, feats, stride=stride)
 
 
 class ToBEVConvolution(nn.Module):
@@ -139,8 +139,8 @@ class ToBEVConvolution(nn.Module):
             coords[:3] /= ratio
             coords[:3] *= ratio
         flatten = torch.cuda.sparse.FloatTensor(coords, feats).coalesce()
-        return SparseTensor(coords=flatten.indices().t().int(),
-                            feats=flatten.values(),
+        return SparseTensor(flatten.indices().t().int(),
+                            flatten.values(),
                             stride=ratio)
 
 

@@ -1,7 +1,7 @@
 #include <torch/extension.h>
 #include <chrono>
 #include <algorithm>
-#include "convolution_cpu_header.h"
+#include "convolution_cpu.h"
 
 void cpu_scatter_launch(const int n_in, const int n_out, const int c,
                         const float *in_feat, float *out_feat,

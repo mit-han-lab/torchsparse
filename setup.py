@@ -30,7 +30,7 @@ file_lis = [
     'torchsparse/src/interpolation/devox_deterministic_gpu.cu',
     'torchsparse/src/interpolation/devox_cpu.cpp',
     'torchsparse/src/others/convert_neighbor_map.cpp',
-    'torchsparse/src/others/convert_neighbor_map_gpu.cu',
+    'torchsparse/src/others/convert_neighbor_map.cu',
     'torchsparse/src/others/convert_neighbor_map_cpu.cpp',
     'torchsparse/src/others/count.cpp',
     'torchsparse/src/others/count_gpu.cu',

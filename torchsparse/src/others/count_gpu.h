@@ -3,10 +3,8 @@
 #include <torch/torch.h>
 #include <vector>
 
-//CUDA forward declarations
-void count_wrapper(int N, const int * data, int * out);
-at::Tensor count_forward(
+void count_wrapper(int N, const int *data, int *out);
+at::Tensor count_forward_cuda(
     const at::Tensor idx,
-    const int s
-);
+    const int s);
 #endif

@@ -1,8 +1,8 @@
 #include <torch/torch.h>
 #include <vector>
-#include "count_cpu_header.h"
+#include "count_cpu.h"
 
-at::Tensor cpu_count_forward(
+at::Tensor count_forward_cpu(
     const at::Tensor idx,
     const int s)
 {

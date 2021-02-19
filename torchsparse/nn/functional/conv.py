@@ -1,4 +1,5 @@
 import copy
+from typing import Optional
 
 import torch
 import torchsparse_backend
@@ -16,30 +17,24 @@ __all__ = ['conv3d']
 class SpConvolution(Function):
     @staticmethod
     def forward(ctx,
-                features,
+                inputs,
                 kernel,
                 neighbor_map,
                 neighbor_offset,
                 sizes,
                 transpose=False):
-        features = features.contiguous()
+        inputs = inputs.contiguous()
         kernel = kernel.contiguous()
         if not transpose:
-            out = torch.zeros(sizes[1],
-                              kernel.size(-1),
-                              device=features.device)
+            out = torch.zeros(sizes[1], kernel.size(-1), device=inputs.device)
         else:
             # tbd: ensure the original, upsampled size to be the same.
-            out = torch.zeros(sizes[0],
-                              kernel.size(-1),
-                              device=features.device)
+            out = torch.zeros(sizes[0], kernel.size(-1), device=inputs.device)
 
-        if 'cuda' in str(features.device):
-            torchsparse_backend.sparseconv_forward(features, out, kernel,
+        if 'cuda' in str(inputs.device):
+            torchsparse_backend.sparseconv_forward(inputs, out, kernel,
                                                    neighbor_map,
                                                    neighbor_offset, transpose)
-        #elif 'cpu' in str(features.device):
-        #    torchsparse_backend.sparseconv_cpu_forward(features, out, kernel, neighbor_map, neighbor_offset.cpu(), transpose)
         else:
             # use the native pytorch XLA APIs for the TPU.
             cur_st = 0
@@ -51,14 +46,10 @@ class SpConvolution(Function):
 
                 if transpose:
                     in_map, out_map = out_map, in_map
-                # gather
-                cur_feat = features[in_map]
-                # gemm
-                cur_feat = torch.mm(cur_feat, kernel[kernel_idx])
-                # scatter
-                out[out_map] += cur_feat
 
-        ctx.for_backwards = (features, kernel, neighbor_map, neighbor_offset,
+                out[out_map] += torch.mm(inputs[in_map], kernel[kernel_idx])
+
+        ctx.for_backwards = (inputs, kernel, neighbor_map, neighbor_offset,
                              transpose)
         return out
 
@@ -67,7 +58,6 @@ class SpConvolution(Function):
         features, kernel, neighbor_map, neighbor_offset, transpose = ctx.for_backwards
         K, c_in, c_out = kernel.size()
         N_in = features.size(0)
-        N_out = grad_out.size(0)
         grad_features = torch.zeros(N_in, c_in, device=features.device)
         grad_kernel = torch.zeros(K, c_in, c_out, device=kernel.device)
 
@@ -86,9 +76,9 @@ sparseconv_op = SpConvolution.apply
 
 
 def conv3d(inputs: SparseTensor,
-           weight,
-           kernel_size,
-           bias=None,
+           weight: torch.Tensor,
+           kernel_size: int,
+           bias: Optional[torch.Tensor] = None,
            stride: int = 1,
            dilation: int = 1,
            transpose=False) -> SparseTensor:
@@ -99,9 +89,7 @@ def conv3d(inputs: SparseTensor,
         feats = feats.matmul(weight)
         if bias is not None:
             feats += bias
-        outputs = SparseTensor(coords=coords,
-                               feats=feats,
-                               stride=inputs.stride)
+        outputs = SparseTensor(coords, feats, stride=inputs.stride)
         outputs.coord_maps = inputs.coord_maps
         outputs.kernel_maps = inputs.kernel_maps
         outputs.check()
@@ -117,7 +105,7 @@ def conv3d(inputs: SparseTensor,
             hash_query = sphash(new_coords, offsets)
             hash_target = sphash(coords)
             idx_query = sphashquery(hash_query, hash_target)
-            idx_query = list(convert_neighbor_map_gpu(idx_query))
+            idx_query = list(convert_neighbor_map(idx_query))
             idx_query[1] = idx_query[1].to('cpu')
             sizes = (feats.shape[0], new_coords.shape[0])
 
@@ -125,8 +113,8 @@ def conv3d(inputs: SparseTensor,
                                   sizes, transpose)
             if bias is not None:
                 feats += bias
-            outputs = SparseTensor(coords=new_coords,
-                                   feats=feats,
+            outputs = SparseTensor(new_coords,
+                                   feats,
                                    stride=inputs.stride * stride)
             outputs.coord_maps = copy.deepcopy(inputs.coord_maps)
             outputs.check()
@@ -142,7 +130,7 @@ def conv3d(inputs: SparseTensor,
                 hash_query = sphash(coords, offsets)
                 hash_target = sphash(coords)
                 idx_query = sphashquery(hash_query, hash_target)
-                idx_query = list(convert_neighbor_map_gpu(idx_query))
+                idx_query = list(convert_neighbor_map(idx_query))
                 idx_query[1] = idx_query[1].to('cpu')
                 sizes = (feats.shape[0], feats.shape[0])
 
@@ -150,9 +138,7 @@ def conv3d(inputs: SparseTensor,
                                       idx_query[1], sizes, transpose)
                 if bias is not None:
                     feats += bias
-                outputs = SparseTensor(coords=coords,
-                                       feats=feats,
-                                       stride=inputs.stride)
+                outputs = SparseTensor(coords, feats, stride=inputs.stride)
                 outputs.coord_maps = inputs.coord_maps
                 outputs.check()
                 outputs.kernel_maps = copy.deepcopy(inputs.kernel_maps)
@@ -163,9 +149,7 @@ def conv3d(inputs: SparseTensor,
                                       kernel_map[1], kernel_map[2], transpose)
                 if bias is not None:
                     feats += bias
-                outputs = SparseTensor(coords=coords,
-                                       feats=feats,
-                                       stride=inputs.stride)
+                outputs = SparseTensor(coords, feats, stride=inputs.stride)
                 outputs.coord_maps = inputs.coord_maps
                 outputs.check()
                 outputs.kernel_maps = inputs.kernel_maps
@@ -178,8 +162,8 @@ def conv3d(inputs: SparseTensor,
                               kernel_map[2], transpose)
         if bias is not None:
             feats += bias
-        outputs = SparseTensor(coords=inputs.coord_maps[original_stride],
-                               feats=feats,
+        outputs = SparseTensor(inputs.coord_maps[original_stride],
+                               feats,
                                stride=original_stride)
         outputs.coord_maps = inputs.coord_maps
         outputs.kernel_maps = inputs.kernel_maps

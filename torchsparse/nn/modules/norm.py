@@ -13,11 +13,9 @@ class BatchNorm(nn.BatchNorm1d):
         super().__init__(num_features=num_features, eps=eps, momentum=momentum)
 
     def forward(self, inputs):
-        feats = inputs.F
-        coords = inputs.C
-        stride = inputs.s
+        coords, feats, stride = inputs.coords, inputs.feats, inputs.stride
         feats = super().forward(feats)
-        outputs = SparseTensor(coords=coords, feats=feats, stride=stride)
+        outputs = SparseTensor(coords, feats, stride=stride)
         outputs.coord_maps = inputs.coord_maps
         outputs.kernel_maps = inputs.kernel_maps
         return outputs
@@ -26,6 +24,7 @@ class BatchNorm(nn.BatchNorm1d):
 class LayerNorm(nn.LayerNorm):
     def __init__(self,
                  normalized_shape,
+                 *,
                  eps: float = 1e-5,
                  elementwise_affine: bool = True) -> None:
         super().__init__(normalized_shape,
@@ -33,11 +32,9 @@ class LayerNorm(nn.LayerNorm):
                          elementwise_affine=elementwise_affine)
 
     def forward(self, inputs):
-        feats = inputs.F
-        coords = inputs.C
-        stride = inputs.s
+        coords, feats, stride = inputs.coords, inputs.feats, inputs.stride
         feats = super().forward(feats)
-        outputs = SparseTensor(coords=coords, feats=feats, stride=stride)
+        outputs = SparseTensor(coords, feats, stride=stride)
         outputs.coord_maps = inputs.coord_maps
         outputs.kernel_maps = inputs.kernel_maps
         return outputs

@@ -1,9 +1,9 @@
 #include <torch/torch.h>
-#include "../hashmap/hashmap_cpu_header.hpp"
+#include "../hashmap/hashmap_cpu.hpp"
 #include <vector>
 #include <cmath>
 #include <iostream>
-#include "query_cpu_header.h"
+#include "query_cpu.h"
 #include <google/dense_hash_map>
 
 at::Tensor cpu_query_forward(

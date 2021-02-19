@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torchsparse
 import torchsparse.nn as spnn
 from torchsparse import SparseTensor
 from torchsparse.utils import sparse_collate_fn, sparse_quantize
@@ -22,8 +21,8 @@ def generate_random_point_cloud(size=100000, voxel_size=0.2):
     voxel_feat = pc[inds]
     voxel_labels = labels[inds]
 
-    sparse_tensor = SparseTensor(coords=voxel_pc, feats=voxel_feat)
-    label_tensor = SparseTensor(coords=voxel_pc, feats=voxel_labels)
+    sparse_tensor = SparseTensor(voxel_pc, voxel_feat)
+    label_tensor = SparseTensor(voxel_pc, voxel_labels)
 
     feed_dict = {'lidar': sparse_tensor, 'targets': label_tensor}
 
