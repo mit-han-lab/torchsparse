@@ -78,6 +78,27 @@ class Conv3d(nn.Module):
                       transpose=self.t)
 
 
+class ToBEVReduction(nn.Module):
+    def __init__(self, dim: int = 1) -> None:
+        super().__init__()
+        self.dim = dim
+
+    def __repr__(self):
+        return 'ToBEVReduction(dim = %d)' % self.dim
+
+    def forward(self, inputs: SparseTensor):
+        coords, feats, stride = inputs.C, inputs.F, inputs.s
+
+        coords = coords.clone()
+        coords[:, self.dim] = 0
+        feats = torch.cat([torch.ones_like(feats[:, :1]), feats], axis=1)
+        tensor = torch.cuda.sparse.FloatTensor(coords.t().long(),
+                                               feats).coalesce()
+        coords = tensor.indices().t().int()
+        feats = tensor.values()[:, 1:] / tensor.values()[:, :1]
+        return SparseTensor(coords=coords, feats=feats, stride=stride)
+
+
 class ToBEVConvolution(nn.Module):
     def __init__(self,
                  in_channels: int,
@@ -89,6 +110,7 @@ class ToBEVConvolution(nn.Module):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.n_kernels = n_kernels
         self.stride = stride
         self.z_dim = z_dim
         self.weight = nn.Parameter(
@@ -119,27 +141,6 @@ class ToBEVConvolution(nn.Module):
         flatten = torch.cuda.sparse.FloatTensor(coords, feats).coalesce()
         return SparseTensor(flatten.values(),
                             flatten.indices().t().int(), ratio)
-
-
-class ToBEVReduction(nn.Module):
-    def __init__(self, dim: int = 1) -> None:
-        super().__init__()
-        self.dim = dim
-
-    def __repr__(self):
-        return 'ToBEVReduction(z_dim = %d)' % self.dim
-
-    def forward(self, inputs: SparseTensor):
-        coords, feats, stride = inputs.C, inputs.F, inputs.s
-
-        coords = coords.clone()
-        coords[:, self.dim] = 0
-        feats = torch.cat([torch.ones_like(feats[:, :1]), feats], axis=1)
-        tensor = torch.cuda.sparse.FloatTensor(coords.t().long(),
-                                               feats).coalesce()
-        coords = tensor.indices().t().int()
-        feats = tensor.values()[:, 1:] / tensor.values()[:, :1]
-        return SparseTensor(coords=coords, feats=feats, stride=stride)
 
 
 class ToDenseBEVConvolution(nn.Module):
@@ -178,12 +179,12 @@ class ToDenseBEVConvolution(nn.Module):
             self.weight, 0, (coords[:, self.z_dim].long() / stride).long())
         feats = (feats.unsqueeze(-1) * weight).sum(1) + self.bias
         coords = (coords - self.offset).t()[[3] + self.bev_dims].long()
-        coords[1:] /= stride
-        coords = coords[0] * int(self.bev_shape.prod()) + coords[1] * int(
+        coords[1:] = (coords[1:] / stride).long()
+        indices = coords[0] * int(self.bev_shape.prod()) + coords[1] * int(
             self.bev_shape[1]) + coords[2]
-        batch_size = coords[0].max().item() + 1
+        batch_size = indices[0].max().item() + 1
         outputs = torch.cuda.sparse.FloatTensor(
-            coords.unsqueeze(0),
+            indices.unsqueeze(0),
             feats,
             torch.Size(
                 [batch_size * int(self.bev_shape.prod()),
