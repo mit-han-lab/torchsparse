@@ -4,30 +4,31 @@ __all__ = ['SparseTensor']
 
 
 class SparseTensor:
-    def __init__(self, feats, coords, stride: int = 1) -> None:
-        assert type(feats) == torch.Tensor
-        assert type(coords) == torch.Tensor
-        self.feats = feats
+    def __init__(self,
+                 coords: torch.Tensor,
+                 feats: torch.Tensor,
+                 stride: int = 1) -> None:
         self.coords = coords
+        self.feats = feats
         self.stride = stride
         self.coord_maps = dict()
         self.kernel_maps = dict()
-
-    @property
-    def F(self):
-        return self.feats
 
     @property
     def C(self):
         return self.coords
 
     @property
+    def F(self):
+        return self.feats
+
+    @property
     def s(self):
         return self.stride
 
     def check(self):
-        if self.s not in self.coord_maps:
-            self.coord_maps[self.s] = self.C
+        if self.stride not in self.coord_maps:
+            self.coord_maps[self.stride] = self.coords
 
     def cuda(self):
         self.feats = self.feats.cuda()

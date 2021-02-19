@@ -22,8 +22,8 @@ def generate_random_point_cloud(size=100000, voxel_size=0.2):
     voxel_feat = pc[inds]
     voxel_labels = labels[inds]
 
-    sparse_tensor = SparseTensor(voxel_feat, voxel_pc)
-    label_tensor = SparseTensor(voxel_labels, voxel_pc)
+    sparse_tensor = SparseTensor(coords=voxel_pc, feats=voxel_feat)
+    label_tensor = SparseTensor(coords=voxel_pc, feats=voxel_labels)
 
     feed_dict = {'lidar': sparse_tensor, 'targets': label_tensor}
 

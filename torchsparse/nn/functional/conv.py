@@ -125,7 +125,9 @@ def conv3d(inputs: SparseTensor,
                                   sizes, transpose)
             if bias is not None:
                 feats += bias
-            outputs = SparseTensor(feats, new_coords, inputs.stride * stride)
+            outputs = SparseTensor(coords=new_coords,
+                                   feats=feats,
+                                   stride=inputs.stride * stride)
             outputs.coord_maps = copy.deepcopy(inputs.coord_maps)
             outputs.check()
             outputs.kernel_maps = copy.deepcopy(inputs.kernel_maps)
@@ -148,7 +150,9 @@ def conv3d(inputs: SparseTensor,
                                       idx_query[1], sizes, transpose)
                 if bias is not None:
                     feats += bias
-                outputs = SparseTensor(feats, coords, inputs.stride)
+                outputs = SparseTensor(coords=coords,
+                                       feats=feats,
+                                       stride=inputs.stride)
                 outputs.coord_maps = inputs.coord_maps
                 outputs.check()
                 outputs.kernel_maps = copy.deepcopy(inputs.kernel_maps)
@@ -159,7 +163,9 @@ def conv3d(inputs: SparseTensor,
                                       kernel_map[1], kernel_map[2], transpose)
                 if bias is not None:
                     feats += bias
-                outputs = SparseTensor(feats, coords, inputs.stride)
+                outputs = SparseTensor(coords=coords,
+                                       feats=feats,
+                                       stride=inputs.stride)
                 outputs.coord_maps = inputs.coord_maps
                 outputs.check()
                 outputs.kernel_maps = inputs.kernel_maps
@@ -172,8 +178,9 @@ def conv3d(inputs: SparseTensor,
                               kernel_map[2], transpose)
         if bias is not None:
             feats += bias
-        outputs = SparseTensor(feats, inputs.coord_maps[original_stride],
-                               original_stride)
+        outputs = SparseTensor(coords=inputs.coord_maps[original_stride],
+                               feats=feats,
+                               stride=original_stride)
         outputs.coord_maps = inputs.coord_maps
         outputs.kernel_maps = inputs.kernel_maps
 

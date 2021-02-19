@@ -7,11 +7,11 @@ __all__ = ['spact', 'relu', 'leaky_relu']
 
 
 def spact(inputs, act_funct=F.relu):
-    feats = inputs.F
-    coords = inputs.C
-    stride = inputs.s
-    output_features = act_funct(feats)
-    outputs = SparseTensor(output_features, coords, stride)
+    feats = inputs.feats
+    coords = inputs.coords
+    stride = inputs.stride
+    feats = act_funct(feats)
+    outputs = SparseTensor(coords=coords, feats=feats, stride=stride)
     outputs.coord_maps = inputs.coord_maps
     outputs.kernel_maps = inputs.kernel_maps
     return outputs

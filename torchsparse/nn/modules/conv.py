@@ -139,8 +139,9 @@ class ToBEVConvolution(nn.Module):
             coords[:3] /= ratio
             coords[:3] *= ratio
         flatten = torch.cuda.sparse.FloatTensor(coords, feats).coalesce()
-        return SparseTensor(flatten.values(),
-                            flatten.indices().t().int(), ratio)
+        return SparseTensor(coords=flatten.indices().t().int(),
+                            feats=flatten.values(),
+                            stride=ratio)
 
 
 class ToDenseBEVConvolution(nn.Module):
