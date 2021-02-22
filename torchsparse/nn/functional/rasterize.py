@@ -1,5 +1,10 @@
 import torch
+<<<<<<< Updated upstream:torchsparse/nn/functional/rasterize.py
 import torchsparse_backend
+=======
+import torch.nn as nn
+import torchsparse_cuda
+>>>>>>> Stashed changes:torchsparse/nn/functional/devox.py
 from torch.autograd import Function
 from torchsparse.nn.functional.hash import *
 

@@ -99,27 +99,43 @@ class ToBEVReduction(nn.Module):
         return SparseTensor(coords, feats, stride=stride)
 
 
+
 class ToBEVConvolution(nn.Module):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
                  n_kernels: int,
                  stride: int = 1,
+<<<<<<< Updated upstream
                  dim: int = 1,
                  bias: bool = False) -> None:
+=======
+                 z_dim: int = 1,
+                 use_bias: bool = False):
+>>>>>>> Stashed changes
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.n_kernels = n_kernels
         self.stride = stride
+<<<<<<< Updated upstream
         self.dim = dim
         self.weight = nn.Parameter(
             torch.zeros(n_kernels, in_channels, out_channels))
         self.bias = nn.Parameter(torch.zeros(1, out_channels)) if bias else 0
         self.reset_parameters()
+=======
+        self.z_dim = z_dim
+        self.kernel = nn.Parameter(
+            torch.zeros(n_kernels, in_channels, out_channels))
+        self.bias = nn.Parameter(torch.zeros(1,
+                                             out_channels)) if use_bias else 0
+        self.init_weight()
+>>>>>>> Stashed changes
 
     def reset_parameters(self):
         std = 1. / math.sqrt(self.in_channels)
+<<<<<<< Updated upstream
         self.weight.data.uniform_(-std, std)
 
     def __repr__(self):
@@ -142,6 +158,56 @@ class ToBEVConvolution(nn.Module):
         return SparseTensor(flatten.indices().t().int(),
                             flatten.values(),
                             stride=ratio)
+=======
+        self.kernel.data.uniform_(-std, std)
+
+    def __repr__(self):
+        return 'ToBEVConvolution(in_channels=%d, out_channels=%d, n_kernels=%d, stride=%d)' % (
+            self.in_channels, self.out_channels, self.n_kernels, self.stride)
+
+    def forward(self, inputs):
+        features = inputs.F
+        coords = inputs.C
+        cur_stride = inputs.s
+        ratio = cur_stride * self.stride
+
+        kernels = torch.index_select(self.kernel, 0,
+                                     coords[:, self.z_dim].long() / cur_stride)
+        output_features = (features.unsqueeze(-1) * kernels).sum(1) + self.bias
+        output_coords = coords.t().long()
+        output_coords[self.z_dim, :] = 0
+        if self.stride > 1:
+            output_coords[:3] /= ratio
+            output_coords[:3] *= ratio
+        flatten = torch.cuda.sparse.FloatTensor(output_coords,
+                                                output_features).coalesce()
+        return SparseTensor(flatten.values(),
+                            flatten.indices().t().int(), ratio)
+
+
+class ToBEVReduction(nn.Module):
+    def __init__(self, z_dim: int = 1):
+        super().__init__()
+        self.z_dim = z_dim
+
+    def __repr__(self):
+        return 'ToBEVReduction(z_dim = %d)' % self.z_dim
+
+    def forward(self, inputs):
+        features = inputs.F
+        coords = inputs.C
+        cur_stride = inputs.s
+
+        flatten_coords = coords.clone()
+        flatten_coords[:, self.z_dim] = 0
+        features_with_cnt = torch.cat(
+            [torch.ones_like(features[:, :1]), features], axis=1)
+        flatten = torch.cuda.sparse.FloatTensor(flatten_coords.t().long(),
+                                                features_with_cnt).coalesce()
+        output_features = flatten.values()[:, 1:] / flatten.values()[:, :1]
+        return SparseTensor(output_features,
+                            flatten.indices().t().int(), cur_stride)
+>>>>>>> Stashed changes
 
 
 class ToDenseBEVConvolution(nn.Module):
@@ -150,8 +216,13 @@ class ToDenseBEVConvolution(nn.Module):
                  out_channels: int,
                  shape,
                  offset: list = [0, 0, 0],
+<<<<<<< Updated upstream
                  dim: int = 1,
                  bias: bool = False) -> None:
+=======
+                 z_dim: int = 1,
+                 use_bias: bool = False):
+>>>>>>> Stashed changes
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -160,10 +231,18 @@ class ToDenseBEVConvolution(nn.Module):
         self.n_kernels = int(shape[self.dim])
         self.bev_dims = [i for i in range(3) if i != self.dim]
         self.bev_shape = shape[self.bev_dims]
+<<<<<<< Updated upstream
         self.weight = nn.Parameter(
             torch.zeros(self.n_kernels, in_channels, out_channels))
         self.bias = nn.Parameter(torch.zeros(1, out_channels)) if bias else 0
         self.reset_parameters()
+=======
+        self.kernel = nn.Parameter(
+            torch.zeros(self.n_kernels, in_channels, out_channels))
+        self.bias = nn.Parameter(torch.zeros(1,
+                                             out_channels)) if use_bias else 0
+        self.init_weight()
+>>>>>>> Stashed changes
 
     def __repr__(self):
         return 'ToDenseBEVConvolution(in_channels=%d, out_channels=%d, n_kernels=%d)' % (
@@ -171,6 +250,7 @@ class ToDenseBEVConvolution(nn.Module):
 
     def reset_parameters(self):
         std = 1. / math.sqrt(self.in_channels)
+<<<<<<< Updated upstream
         self.weight.data.uniform_(-std, std)
 
     def forward(self, inputs: SparseTensor):
@@ -194,3 +274,30 @@ class ToDenseBEVConvolution(nn.Module):
         outputs = outputs.view(batch_size, *self.bev_shape, -1)
         outputs = outputs.permute(0, 3, 1, 2).contiguous()
         return outputs
+=======
+        self.kernel.data.uniform_(-std, std)
+
+    def forward(self, inputs):
+        features = inputs.F
+        coords = inputs.C
+        cur_stride = inputs.s
+
+        kernels = torch.index_select(self.kernel, 0,
+                                     coords[:, self.z_dim].long() / cur_stride)
+        sparse_features = (features.unsqueeze(-1) * kernels).sum(1) + self.bias
+        sparse_coords = (coords - self.offset).t()[[3] + self.bev_dims].long()
+        sparse_coords[1:] /= cur_stride
+        batch_size = sparse_coords[0].max().item() + 1
+        sparse_coords = sparse_coords[0] * int(self.bev_shape.prod(
+        )) + sparse_coords[1] * int(self.bev_shape[1]) + sparse_coords[2]
+        bev = torch.cuda.sparse.FloatTensor(
+            sparse_coords.unsqueeze(0),
+            sparse_features,
+            torch.Size([
+                batch_size * int(self.bev_shape.prod()),
+                sparse_features.size(-1)
+            ]),
+        ).to_dense()
+        return bev.view(batch_size, *self.bev_shape,
+                        -1).permute(0, 3, 1, 2).contiguous()  # To BCHW
+>>>>>>> Stashed changes

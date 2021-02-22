@@ -1,15 +1,15 @@
 from torch import nn
 
-from torchsparse.sparse_tensor import *
+from ..functional import global_avg_pool, global_max_pool
 
-from ..functional import *
+__all__ = ['GlobalAvgPool', 'GlobalMaxPool']
 
 
-class GlobalAveragePooling(nn.Module):
+class GlobalAvgPool(nn.Module):
     def forward(self, inputs):
         return global_avg_pool(inputs)
 
 
-class GlobalMaxPooling(nn.Module):
+class GlobalMaxPool(nn.Module):
     def forward(self, inputs):
         return global_max_pool(inputs)
