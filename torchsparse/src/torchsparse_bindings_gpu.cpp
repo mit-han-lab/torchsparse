@@ -10,7 +10,7 @@
 #include "hash/hash_gpu.h"
 #include "interpolation/devox_gpu.h"
 #include "interpolation/devox_cpu.h"
-#include "others/convert_neighbor_map_gpu.h"
+#include "others/convert_neighbor_map.h"
 #include "others/count_gpu.h"
 #include "others/insertion_gpu.h"
 #include "others/insertion_cpu.h"

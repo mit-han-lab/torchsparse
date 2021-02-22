@@ -1,5 +1,5 @@
 #include <torch/torch.h>
-#include "convert_neighbor_map_gpu.h"
+#include "convert_neighbor_map.h"
 #include <vector>
 
 at::Tensor convert_map_forward(
