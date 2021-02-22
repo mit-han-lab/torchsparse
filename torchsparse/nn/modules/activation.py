@@ -17,8 +17,15 @@ class ReLU(nn.ReLU):
         return outputs
 
 
+<<<<<<< Updated upstream
 class LeakyReLU(nn.LeakyReLU):
     def __init__(self, negative_slope: float = 0.1,
+=======
+
+class LeakyReLU(Activation):
+    def __init__(self,
+                 negative_slope: float = 0.1,
+>>>>>>> Stashed changes
                  inplace: bool = True) -> None:
         super().__init__(negative_slope=negative_slope, inplace=inplace)
 
