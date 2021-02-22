@@ -10,10 +10,6 @@ has_cuda = (torch.cuda.is_available() and CUDA_HOME is not None) or os.getenv(
 
 from torchsparse import __version__
 
-# Notice that CUDA files, header files should not share names with CPP files.
-# Otherwise, there will be "ninja: warning: multiple rules generate xxx.o", which leads to
-# multiple definitions error!
-
 file_lis = [
     'torchsparse/src/torchsparse_bindings_gpu.cpp',
     'torchsparse/src/convolution/convolution_cpu.cpp',
