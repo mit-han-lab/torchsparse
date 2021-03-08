@@ -38,8 +38,6 @@ class SpConvolution(Function):
             torchsparse_cuda.sparseconv_forward(features, out, kernel,
                                                 neighbor_map, neighbor_offset,
                                                 transpose)
-        #elif 'cpu' in str(features.device):
-        #    torchsparse_cuda.sparseconv_cpu_forward(features, out, kernel, neighbor_map, neighbor_offset.cpu(), transpose)
         else:
             # use the native pytorch XLA APIs for the TPU.
             cur_st = 0
@@ -67,7 +65,6 @@ class SpConvolution(Function):
         features, kernel, neighbor_map, neighbor_offset, transpose = ctx.for_backwards
         K, c_in, c_out = kernel.size()
         N_in = features.size(0)
-        N_out = grad_out.size(0)
         grad_features = torch.zeros(N_in, c_in, device=features.device)
         grad_kernel = torch.zeros(K, c_in, c_out, device=kernel.device)
 
@@ -86,7 +83,7 @@ sparseconv_op = SpConvolution.apply
 
 def conv3d(inputs,
            kernel,
-           ks=3,
+           kernel_size,
            bias=None,
            stride=1,
            dilation=1,
@@ -94,7 +91,8 @@ def conv3d(inputs,
     features = inputs.F
     coords = inputs.C
     cur_stride = inputs.s
-    if ks == 1:
+
+    if kernel_size == 1 and stride == 1 and dilation == 1:
         output_features = features.matmul(kernel)
         if bias is not None:
             output_features += bias
@@ -102,14 +100,15 @@ def conv3d(inputs,
         output_tensor.coord_maps = inputs.coord_maps
         output_tensor.kernel_maps = inputs.kernel_maps
         output_tensor.check()
-
     elif not transpose:
         kernel_map = inputs.kernel_maps.get(
-            'k%s_os%d_s%d_d%d' % (ks, cur_stride, stride, dilation), None)
+            'k%s_os%d_s%d_d%d' % (kernel_size, cur_stride, stride, dilation),
+            None)
 
         if stride > 1:
             # do downsample
-            kRegion = KernelRegion(kernel_size=ks, tensor_stride=cur_stride)
+            kRegion = KernelRegion(kernel_size=kernel_size,
+                                   tensor_stride=cur_stride)
             kOffset = kRegion.get_kernel_offset().to(features.device)
             new_coords = spdownsample(coords, stride * cur_stride)
             hash_query = sphash(new_coords, kOffset)
@@ -128,18 +127,16 @@ def conv3d(inputs,
             output_tensor.check()
             output_tensor.kernel_maps = copy.deepcopy(inputs.kernel_maps)
             output_tensor.kernel_maps['k%s_os%d_s%d_d%d' %
-                                      (ks, cur_stride, stride,
+                                      (kernel_size, cur_stride, stride,
                                        dilation)] = idx_query + [sizes]
 
         else:
-            # submanifold sparseconv
             if kernel_map is None:
-                kRegion = KernelRegion(kernel_size=ks,
+                kRegion = KernelRegion(kernel_size=kernel_size,
                                        tensor_stride=cur_stride)
                 try:
                     kOffset = kRegion.get_kernel_offset().to(features.device)
                 except:
-                    print(features)
                     raise
                 hash_query = sphash(coords, kOffset)
                 hash_target = sphash(coords)
@@ -157,7 +154,7 @@ def conv3d(inputs,
                 output_tensor.check()
                 output_tensor.kernel_maps = copy.deepcopy(inputs.kernel_maps)
                 output_tensor.kernel_maps['k%s_os%d_s%d_d%d' %
-                                          (ks, cur_stride, stride,
+                                          (kernel_size, cur_stride, stride,
                                            dilation)] = idx_query + [sizes]
             else:
                 output_features = sparseconv_op(features, kernel,
@@ -175,7 +172,8 @@ def conv3d(inputs,
         # do upsample
         original_stride = int(cur_stride / stride)
         kernel_map = inputs.kernel_maps.get(
-            'k%s_os%d_s%d_d%d' % (ks, original_stride, stride, dilation), None)
+            'k%s_os%d_s%d_d%d' %
+            (kernel_size, original_stride, stride, dilation), None)
         output_features = sparseconv_op(features, kernel, kernel_map[0],
                                         kernel_map[1], kernel_map[2],
                                         transpose)
