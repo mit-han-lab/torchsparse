@@ -185,6 +185,7 @@ def conv3d(inputs,
                                      inputs.coord_maps[original_stride],
                                      original_stride)
         output_tensor.coord_maps = inputs.coord_maps
+        output_tensor.check()
         output_tensor.kernel_maps = inputs.kernel_maps
 
     return output_tensor
