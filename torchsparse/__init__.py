@@ -2,7 +2,7 @@ import torch
 from .sparse_tensor import *
 from .point_tensor import *
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 
 
 def cat(input_list, dim=1):
