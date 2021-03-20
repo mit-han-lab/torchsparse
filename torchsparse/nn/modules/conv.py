@@ -71,7 +71,7 @@ class Conv3d(nn.Module):
     def forward(self, inputs):
         return conv3d(inputs,
                       self.kernel,
-                      ks=self.kernel_size,
+                      kernel_size=self.kernel_size,
                       bias=self.bias,
                       stride=self.stride,
                       dilation=self.dilation,
