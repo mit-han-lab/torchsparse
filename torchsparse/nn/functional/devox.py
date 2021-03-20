@@ -53,7 +53,7 @@ def calc_ti_weights(pc, idx_query, scale=1.0):
             weight110, weight111
         ], 1).transpose(1, 0).contiguous()
         if scale != 1:
-            all_weights /= scale ** 3
+            all_weights /= scale**3
         all_weights[idx_query == -1] = 0
         all_weights /= all_weights.sum(0) + 1e-8
     return all_weights

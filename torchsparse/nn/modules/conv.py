@@ -27,7 +27,7 @@ class Conv3d(nn.Module):
         self.stride = stride
         self.dilation = dilation
         if not isinstance(kernel_size, (list, tuple)):
-            self.kernel_volume = self.kernel_size ** 3
+            self.kernel_volume = self.kernel_size**3
             self.kernel = nn.Parameter(
                 torch.zeros(self.kernel_volume, inc,
                             outc)) if self.kernel_size > 1 else nn.Parameter(
