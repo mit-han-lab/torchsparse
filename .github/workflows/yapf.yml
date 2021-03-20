@@ -49,8 +49,6 @@ jobs:
         run: |
           git commit -m "Automation: YAPF Formatter" --all | exit 0
 
-      # NOTE : only push changes when the source branch is being pushed to master (target branch)
       - name: push changes
-        if: github.ref == 'refs/heads/master'
         run: |
           git push
