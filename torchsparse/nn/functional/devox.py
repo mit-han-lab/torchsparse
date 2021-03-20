@@ -1,5 +1,5 @@
 import torch
-import torchsparse_cuda
+import torchsparse_backend
 from torch.autograd import Function
 
 __all__ = ['spdevoxelize', 'calc_ti_weights']
@@ -63,11 +63,11 @@ class DevoxelizationGPU(Function):
     @staticmethod
     def forward(ctx, feat, indices, weights):
         if 'cuda' in str(feat.device):
-            out = torchsparse_cuda.devoxelize_forward(
+            out = torchsparse_backend.devoxelize_forward(
                 feat.contiguous(),
                 indices.contiguous().int(), weights.contiguous())
         else:
-            out = torchsparse_cuda.cpu_devoxelize_forward(
+            out = torchsparse_backend.cpu_devoxelize_forward(
                 feat.contiguous(),
                 indices.contiguous().int(), weights.contiguous())
 
@@ -81,10 +81,10 @@ class DevoxelizationGPU(Function):
         indices, weights, n = ctx.for_backwards
 
         if 'cuda' in str(grad_out.device):
-            grad_features = torchsparse_cuda.devoxelize_backward(
+            grad_features = torchsparse_backend.devoxelize_backward(
                 grad_out.contiguous(), indices, weights, n)
         else:
-            grad_features = torchsparse_cuda.cpu_devoxelize_backward(
+            grad_features = torchsparse_backend.cpu_devoxelize_backward(
                 grad_out.contiguous(), indices, weights, n)
 
         return grad_features, None, None

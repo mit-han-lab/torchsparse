@@ -1,5 +1,5 @@
 import torch
-import torchsparse_cuda
+import torchsparse_backend
 from torch.autograd import Function
 from torchsparse.nn.functional.hash import *
 
@@ -24,16 +24,16 @@ class DownsampleGPU(Function):
         # gpu
         if 'cuda' in str(coords.device):
             uq_coords = torch.round(
-                torchsparse_cuda.insertion_forward(coords_new.float(), inv,
-                                                   cnt))
+                torchsparse_backend.insertion_forward(coords_new.float(), inv,
+                                                      cnt))
         elif 'cpu' in str(coords.device):
             uq_coords = torch.round(
-                torchsparse_cuda.cpu_insertion_forward(coords_new.float(), inv,
-                                                       cnt))
+                torchsparse_backend.cpu_insertion_forward(
+                    coords_new.float(), inv, cnt))
         else:
             device = coords.device
             uq_coords = torch.round(
-                torchsparse_cuda.cpu_insertion_forward(
+                torchsparse_backend.cpu_insertion_forward(
                     coords_new.float().cpu(), inv.cpu(), cnt.cpu()))
             uq_coords = uq_coords.to(device)
         uq_coords = uq_coords.int()

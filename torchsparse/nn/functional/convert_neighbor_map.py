@@ -1,5 +1,5 @@
 import torch
-import torchsparse_cuda
+import torchsparse_backend
 from torch.autograd import Function
 
 
@@ -8,14 +8,14 @@ class ConvertNeighborMap(Function):
     def forward(ctx, neighbor_map):
         idx_batch, idx_point = torch.where(neighbor_map != -1)
         if 'cuda' in str(neighbor_map.device):
-            map_converted = torchsparse_cuda.convert_map_forward(
+            map_converted = torchsparse_backend.convert_map_forward(
                 neighbor_map.int(), idx_batch.int(), idx_point.int())
         elif 'cpu' in str(neighbor_map.device):
-            map_converted = torchsparse_cuda.cpu_convert_map_forward(
+            map_converted = torchsparse_backend.cpu_convert_map_forward(
                 neighbor_map.int(), idx_batch.int(), idx_point.int())
         else:
             device = neighbor_map.device
-            map_converted = torchsparse_cuda.cpu_convert_map_forward(
+            map_converted = torchsparse_backend.cpu_convert_map_forward(
                 neighbor_map.int().cpu(),
                 idx_batch.int().cpu(),
                 idx_point.int().cpu())
