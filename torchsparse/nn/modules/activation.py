@@ -31,7 +31,8 @@ class ReLU(Activation):
 
 
 class LeakyReLU(Activation):
-    def __init__(self, negative_slope: float = 0.1,
+    def __init__(self,
+                 negative_slope: float = 0.1,
                  inplace: bool = True) -> None:
         super().__init__()
         self.activation = functools.partial(spleaky_relu,
