@@ -1,5 +1,5 @@
 import torch
-import torchsparse_cuda
+import torchsparse_backend
 from torch.autograd import Function
 
 __all__ = ['sphashquery']
@@ -18,16 +18,16 @@ class SparseQuery(Function):
                                   dtype=torch.long)
 
         if 'cuda' in str(hash_query.device):
-            out, key_buf, val_buf, key = torchsparse_cuda.query_forward(
+            out, key_buf, val_buf, key = torchsparse_backend.query_forward(
                 hash_query.view(-1).contiguous(), hash_target.contiguous(),
                 idx_target)
         elif 'cpu' in str(hash_query.device):
-            out = torchsparse_cuda.cpu_query_forward(
+            out = torchsparse_backend.cpu_query_forward(
                 hash_query.view(-1).contiguous(), hash_target.contiguous(),
                 idx_target)
         else:
             device = hash_query.device
-            out = torchsparse_cuda.cpu_query_forward(
+            out = torchsparse_backend.cpu_query_forward(
                 hash_query.view(-1).contiguous().cpu(),
                 hash_target.contiguous().cpu(), idx_target.cpu()).to(device)
 

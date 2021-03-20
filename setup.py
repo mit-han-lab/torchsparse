@@ -65,7 +65,7 @@ setup(
     version=__version__,
     packages=find_packages(),
     ext_modules=[
-        extension_type('torchsparse_cuda',
+        extension_type('torchsparse_backend',
                        file_lis,
                        extra_compile_args=extra_compile_args)
     ],
