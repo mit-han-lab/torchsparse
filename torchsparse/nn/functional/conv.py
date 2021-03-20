@@ -1,7 +1,7 @@
 import copy
 
 import torch
-import torchsparse_cuda
+import torchsparse_backend
 from torch.autograd import Function
 from torchsparse import *
 from torchsparse.nn.functional.convert_neighbor_map import *
@@ -35,9 +35,9 @@ class SpConvolution(Function):
                               device=features.device)
 
         if 'cuda' in str(features.device):
-            torchsparse_cuda.sparseconv_forward(features, out, kernel,
-                                                neighbor_map, neighbor_offset,
-                                                transpose)
+            torchsparse_backend.sparseconv_forward(features, out, kernel,
+                                                   neighbor_map,
+                                                   neighbor_offset, transpose)
         else:
             # use the native pytorch XLA APIs for the TPU.
             cur_st = 0
@@ -69,10 +69,11 @@ class SpConvolution(Function):
         grad_kernel = torch.zeros(K, c_in, c_out, device=kernel.device)
 
         if 'cuda' in str(features.device):
-            torchsparse_cuda.sparseconv_backward(features, grad_features,
-                                                 grad_out.contiguous(), kernel,
-                                                 grad_kernel, neighbor_map,
-                                                 neighbor_offset, transpose)
+            torchsparse_backend.sparseconv_backward(features, grad_features,
+                                                    grad_out.contiguous(),
+                                                    kernel, grad_kernel,
+                                                    neighbor_map,
+                                                    neighbor_offset, transpose)
         else:
             raise NotImplementedError
         return grad_features, grad_kernel, None, None, None, None
