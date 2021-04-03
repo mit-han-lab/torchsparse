@@ -151,12 +151,12 @@ def sparse_collate(coords,
 
         if not coord_float:
             coords_batch.append(
-                torch.cat((coord, torch.ones(num_points, 1).int() * batch_id),
+                torch.cat((coord, torch.ones((num_points, 1), device=coord.device).int() * batch_id),
                           1))
         else:
             coords_batch.append(
                 torch.cat(
-                    (coord, torch.ones(num_points, 1).float() * batch_id), 1))
+                    (coord, torch.ones((num_points, 1), device=coord.device).float() * batch_id), 1))
 
         # Features
         feats_batch.append(feat)
