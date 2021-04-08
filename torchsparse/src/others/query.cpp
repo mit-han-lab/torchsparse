@@ -15,7 +15,11 @@ std::vector<at::Tensor> query_forward(
   //return group_point_forward_gpu(points, indices);
   int n = hash_target.size(0);
   int n1 = hash_query.size(0);
-  int table_size =  2 * pow(2,ceil(log2((double)n)));
+  const int nextPow2 = pow(2,ceil(log2((double)n)));
+  // When n is large, the hash values tend to be more evenly distrubuted and choosing table_size to be 
+  // 2 * nextPow2 typically suffices. For smaller n, the effect of uneven distribution of hash values is more
+  // pronounced and hence we choose table_size to be 4 * nextPow2 to reduce the chance of bucket overflow.
+  int table_size =  (n < 2048) ? 4 * nextPow2 : 2 * nextPow2;
   if(table_size < 512){
       table_size = 512;
   }
