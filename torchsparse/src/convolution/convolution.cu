@@ -8,6 +8,34 @@
 #include <algorithm>
 #include "convolution_gpu.h"
 
+template <typename scalar_t>
+__global__ void gather_kernel(const int n_k, const int n_in, const int c, 
+                               const scalar_t *in_feat, scalar_t *out_feat, const int *kmap,
+                               const bool transpose){
+
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int i = index / c;
+    int j = index % c;
+    if(i >= n_k) return;
+    int in_pos = kmap[2 * i + transpose];
+    if(in_pos < 0) return;
+    out_feat[i * c + j] = in_feat[in_pos * c + j];
+}
+
+template <typename scalar_t>
+__global__ void scatter_kernel(const int n_in, const int n_out, const int c, 
+                               const scalar_t *in_feat, scalar_t *out_feat, const int *kmap,
+                               const bool transpose){
+
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int i = index / c;
+    int j = index % c;
+    if(i >= n_in) return;
+    int out_pos = kmap[2 * i + 1 - transpose];
+    if(out_pos < 0) return;
+    out_feat[out_pos * c + j] += in_feat[i * c + j];
+}
+
 void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
                            at::Tensor kernel, at::Tensor neighbor_map,
                            at::Tensor neighbor_offset, const bool transpose)
@@ -16,6 +44,8 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
     {
         throw std::invalid_argument("Input feature size and kernel size mismatch");
     }
+
+    bool is_half = in_feat.scalar_type() == at::ScalarType::Half;
 
     int out_nrows = out_feat.size(0);
     out_feat.resize_({out_nrows, kernel.size(2)});
@@ -62,24 +92,57 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
             continue;
         }
 
-        auto out_buffer_activated =
-            torch::from_blob(out_buffer.data_ptr<float>(),
-                             {neighbor_offset.data_ptr<int>()[i], kernel.size(2)}, options);
-        auto in_buffer_activated =
-            torch::from_blob(in_buffer.data_ptr<float>(),
-                             {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+        at::Tensor out_buffer_activated;
+        at::Tensor in_buffer_activated;
+        if (is_half)
+        {
+            out_buffer_activated =
+                torch::from_blob(out_buffer.data_ptr<at::Half>(),
+                                 {neighbor_offset.data_ptr<int>()[i], kernel.size(2)}, options);
+            in_buffer_activated =
+                torch::from_blob(in_buffer.data_ptr<at::Half>(),
+                                 {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+        }
+        else
+        {
+            out_buffer_activated =
+                torch::from_blob(out_buffer.data_ptr<float>(),
+                                 {neighbor_offset.data_ptr<int>()[i], kernel.size(2)}, options);
+            in_buffer_activated =
+                torch::from_blob(in_buffer.data_ptr<float>(),
+                                 {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+        }
 
-        // gather
-        gather_launch(in_buffer_activated.size(0), in_feat.size(0), kernel.size(1),
-                      in_feat.data_ptr<float>(), in_buffer_activated.data_ptr<float>(),
-                      neighbor_map.data_ptr<int>() + cur_offset, transpose);
+        int n_in = in_buffer_activated.size(0);
+        int n_out = in_feat.size(0);
+        int c = kernel.size(1);
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(in_feat.type(), "ConvolutionForwardGPU", ([&] {
+                                        gather_kernel<scalar_t><<<ceil((double)(n_in * c) / 256), 256>>>(
+                                            n_in,
+                                            n_out,
+                                            c,
+                                            in_feat.data_ptr<scalar_t>(),
+                                            in_buffer_activated.data_ptr<scalar_t>(),
+                                            neighbor_map.data_ptr<int>() + cur_offset,
+                                            transpose);
+                                    }));
 
         // gemm
         torch::mm_out(out_buffer_activated, in_buffer_activated, kernel[i]);
 
-        // scatter
-        scatter_launch(neighbor_offset.data_ptr<int>()[i], out_nrows, kernel.size(2), out_buffer_activated.data_ptr<float>(),
-                       out_feat.data_ptr<float>(), neighbor_map.data_ptr<int>() + cur_offset, transpose);
+        n_in = neighbor_offset.data_ptr<int>()[i];
+        n_out = out_nrows;
+        c = kernel.size(2);
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(in_feat.type(), "ConvolutionForwardGPU", ([&] {
+                                        scatter_kernel<scalar_t><<<ceil((double)(n_in * c) / 256), 256>>>(
+                                            neighbor_offset.data_ptr<int>()[i],
+                                            out_nrows,
+                                            kernel.size(2),
+                                            out_buffer_activated.data_ptr<scalar_t>(),
+                                            out_feat.data_ptr<scalar_t>(),
+                                            neighbor_map.data_ptr<int>() + cur_offset,
+                                            transpose);
+                                    }));
 
         cur_offset += 2 * neighbor_offset.data_ptr<int>()[i];
     }
@@ -132,22 +195,22 @@ void ConvolutionBackwardGPU(
             torch::from_blob(in_buffer.data_ptr<float>(),
                              {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
 
-        // gather
-        gather_launch(out_grad_buffer_activated.size(0), grad_out_feat.size(0), kernel.size(2),
-                      grad_out_feat.data_ptr<float>(), out_grad_buffer_activated.data_ptr<float>(),
-                      neighbor_map.data_ptr<int>() + cur_offset, !transpose);
+        // // gather
+        // gather_launch(out_grad_buffer_activated.size(0), grad_out_feat.size(0), kernel.size(2),
+        //               grad_out_feat.data_ptr<float>(), out_grad_buffer_activated.data_ptr<float>(),
+        //               neighbor_map.data_ptr<int>() + cur_offset, !transpose);
 
-        gather_launch(in_buffer_activated.size(0), in_feat.size(0), kernel.size(1),
-                      in_feat.data_ptr<float>(), in_buffer_activated.data_ptr<float>(),
-                      neighbor_map.data_ptr<int>() + cur_offset, transpose);
+        // gather_launch(in_buffer_activated.size(0), in_feat.size(0), kernel.size(1),
+        //               in_feat.data_ptr<float>(), in_buffer_activated.data_ptr<float>(),
+        //               neighbor_map.data_ptr<int>() + cur_offset, transpose);
 
         // gemm
         torch::mm_out(in_grad_buffer_activated, out_grad_buffer_activated, torch::transpose(kernel[i], 0, 1));
         torch::mm_out(kernel_grad_buffer, torch::transpose(in_buffer_activated, 0, 1), out_grad_buffer_activated);
 
-        // scatter
-        scatter_launch(neighbor_offset.data_ptr<int>()[i], in_feat.size(0), kernel.size(1), in_grad_buffer_activated.data_ptr<float>(),
-                       grad_in_feat.data_ptr<float>(), neighbor_map.data_ptr<int>() + cur_offset, !transpose);
+        // // scatter
+        // scatter_launch(neighbor_offset.data_ptr<int>()[i], in_feat.size(0), kernel.size(1), in_grad_buffer_activated.data_ptr<float>(),
+        //                grad_in_feat.data_ptr<float>(), neighbor_map.data_ptr<int>() + cur_offset, !transpose);
 
         cur_offset += 2 * neighbor_offset.data_ptr<int>()[i];
     }

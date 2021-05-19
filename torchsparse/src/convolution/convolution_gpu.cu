@@ -5,33 +5,6 @@
 #include <chrono>
 #include <cstdio>
 
-__global__ void gather_kernel(const int n_k, const int n_in, const int c, 
-                               const float *in_feat, float *out_feat, const int *kmap,
-                               const bool transpose){
-
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    int i = index / c;
-    int j = index % c;
-    if(i >= n_k) return;
-    int in_pos = kmap[2 * i + transpose];
-    if(in_pos < 0) return;
-    out_feat[i * c + j] = in_feat[in_pos * c + j];
-}
-
-
-__global__ void scatter_kernel(const int n_in, const int n_out, const int c, 
-                               const float *in_feat, float *out_feat, const int *kmap,
-                               const bool transpose){
-
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    int i = index / c;
-    int j = index % c;
-    if(i >= n_in) return;
-    int out_pos = kmap[2 * i + 1 - transpose];
-    if(out_pos < 0) return;
-    out_feat[out_pos * c + j] += in_feat[i * c + j];
-}
-
 // Given each output, get an input feature for each corresponding kernel weight
 // and add the output in place
 __global__ void inplace_convolution(const int n, const float *in_feat,
@@ -340,21 +313,6 @@ void ConvolutionBackwardKernelGPU(
   }
 
    
-}
-
-void scatter_launch(const int n_in, const int n_out, const int c, 
-                               const float *in_feat, float *out_feat, const int *kmap,
-                               const bool transpose){
-    scatter_kernel<<<ceil((double)(n_in * c) / 256), 256>>>(n_in, n_out, c, in_feat, 
-                                                            out_feat, kmap, transpose);
-}
-
-
-void gather_launch(const int n_k, const int n_in, const int c, 
-                               const float *in_feat, float *out_feat, const int *kmap,
-                               const bool transpose){
-    gather_kernel<<<ceil((double)(n_k * c) / 256), 256>>>(n_k, n_in, c, in_feat, 
-                                                          out_feat, kmap, transpose);
 }
 
 #endif

@@ -27,11 +27,13 @@ class SpConvolution(Function):
         if not transpose:
             out = torch.zeros(sizes[1],
                               kernel.size(-1),
+                              dtype=features.dtype,
                               device=features.device)
         else:
             # tbd: ensure the original, upsampled size to be the same.
             out = torch.zeros(sizes[0],
                               kernel.size(-1),
+                              dtype=features.dtype,
                               device=features.device)
 
         if 'cuda' in str(features.device):
