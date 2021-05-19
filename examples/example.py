@@ -6,6 +6,7 @@ import torchsparse.nn as spnn
 from torchsparse import SparseTensor
 from torchsparse.utils import sparse_collate_fn, sparse_quantize
 import argparse
+import time
 
 
 def generate_random_point_cloud(size=100000, voxel_size=0.2):
@@ -31,9 +32,9 @@ def generate_random_point_cloud(size=100000, voxel_size=0.2):
     return feed_dict
 
 
-def generate_batched_random_point_clouds(size=100000,
+def generate_batched_random_point_clouds(size=400000,
                                          voxel_size=0.2,
-                                         batch_size=2):
+                                         batch_size=4):
     batch = []
     for i in range(batch_size):
         batch.append(generate_random_point_cloud(size, voxel_size))
@@ -51,22 +52,21 @@ def dummy_train(device, mixed=False):
         spnn.ReLU(True), spnn.Conv3d(32, 10, kernel_size=1)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.CrossEntropyLoss().to(device)
-
-    if mixed:
-        model.half()
+    scaler = torch.cuda.amp.GradScaler(enabled=mixed)
 
     print('Starting dummy training...')
     for i in range(10):
+        optimizer.zero_grad()
         feed_dict = generate_batched_random_point_clouds()
         inputs = feed_dict['lidar'].to(device)
         targets = feed_dict['targets'].F.to(device).long()
-        if mixed:
-            inputs.F = inputs.F.half()
-        outputs = model(inputs)
-        optimizer.zero_grad()
-        loss = criterion(outputs.F, targets)
-        loss.backward()
-        optimizer.step()
+        with torch.cuda.amp.autocast(enabled=mixed):
+            outputs = model(inputs)
+            print(outputs.F.dtype)
+            loss = criterion(outputs.F, targets)
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
         print('[step %d] loss = %f.' % (i, loss.item()))
     print('Finished dummy training!')
 
@@ -80,5 +80,15 @@ if __name__ == '__main__':
     np.random.seed(2021)
     torch.manual_seed(2021)
 
+    if args.mixed:
+        print("running in mixed precision")
+    else:
+        print("running in default precision")
+
+    start = time.time()
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     dummy_train(device, args.mixed)
+    end = time.time()
+    print("Done in: %f" % (end - start))
+    print(torch.cuda.max_memory_allocated() / 1024 / 1024)
+    print(torch.cuda.max_memory_reserved() / 1024 / 1024)

@@ -158,6 +158,8 @@ void ConvolutionBackwardGPU(
     grad_kernel.resize_as_(kernel);
     grad_kernel.zero_();
 
+    bool is_half = in_feat.scalar_type() == at::ScalarType::Half;
+
     int kernel_volume = kernel.size(0);
     bool flag = false;
     int in_buffer_size;
@@ -185,32 +187,82 @@ void ConvolutionBackwardGPU(
             continue;
         }
 
-        auto out_grad_buffer_activated =
-            torch::from_blob(out_grad_buffer.data_ptr<float>(),
-                             {neighbor_offset.data_ptr<int>()[i], kernel.size(2)}, options);
-        auto in_grad_buffer_activated =
-            torch::from_blob(in_grad_buffer.data_ptr<float>(),
-                             {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
-        auto in_buffer_activated =
-            torch::from_blob(in_buffer.data_ptr<float>(),
-                             {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+        // Can't figure out a cleaner way to do this
+        at::Tensor out_grad_buffer_activated;
+        at::Tensor in_grad_buffer_activated;
+        at::Tensor in_buffer_activated;
+        if (is_half)
+        {
+            out_grad_buffer_activated =
+                torch::from_blob(out_grad_buffer.data_ptr<at::Half>(),
+                                 {neighbor_offset.data_ptr<int>()[i], kernel.size(2)}, options);
+            in_grad_buffer_activated =
+                torch::from_blob(in_grad_buffer.data_ptr<at::Half>(),
+                                 {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+            in_buffer_activated =
+                torch::from_blob(in_buffer.data_ptr<at::Half>(),
+                                 {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+        }
+        else
+        {
+            out_grad_buffer_activated =
+                torch::from_blob(out_grad_buffer.data_ptr<float>(),
+                                 {neighbor_offset.data_ptr<int>()[i], kernel.size(2)}, options);
+            in_grad_buffer_activated =
+                torch::from_blob(in_grad_buffer.data_ptr<float>(),
+                                 {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+            in_buffer_activated =
+                torch::from_blob(in_buffer.data_ptr<float>(),
+                                 {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+        }
 
-        // // gather
-        // gather_launch(out_grad_buffer_activated.size(0), grad_out_feat.size(0), kernel.size(2),
-        //               grad_out_feat.data_ptr<float>(), out_grad_buffer_activated.data_ptr<float>(),
-        //               neighbor_map.data_ptr<int>() + cur_offset, !transpose);
+        // gather
+        int n_in = out_grad_buffer_activated.size(0);
+        int n_out = grad_out_feat.size(0);
+        int c = kernel.size(2);
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(in_feat.type(), "ConvolutionForwardGPU", ([&] {
+                                        gather_kernel<scalar_t><<<ceil((double)(n_in * c) / 256), 256>>>(
+                                            n_in,
+                                            n_out,
+                                            c,
+                                            grad_out_feat.data_ptr<scalar_t>(),
+                                            out_grad_buffer_activated.data_ptr<scalar_t>(),
+                                            neighbor_map.data_ptr<int>() + cur_offset,
+                                            !transpose);
+                                    }));
 
-        // gather_launch(in_buffer_activated.size(0), in_feat.size(0), kernel.size(1),
-        //               in_feat.data_ptr<float>(), in_buffer_activated.data_ptr<float>(),
-        //               neighbor_map.data_ptr<int>() + cur_offset, transpose);
+        n_in = in_buffer_activated.size(0);
+        n_out = in_feat.size(0);
+        c = kernel.size(1);
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(in_feat.type(), "ConvolutionForwardGPU", ([&] {
+                                        gather_kernel<scalar_t><<<ceil((double)(n_in * c) / 256), 256>>>(
+                                            n_in,
+                                            n_out,
+                                            c,
+                                            in_feat.data_ptr<scalar_t>(),
+                                            in_buffer_activated.data_ptr<scalar_t>(),
+                                            neighbor_map.data_ptr<int>() + cur_offset,
+                                            transpose);
+                                    }));
 
         // gemm
         torch::mm_out(in_grad_buffer_activated, out_grad_buffer_activated, torch::transpose(kernel[i], 0, 1));
         torch::mm_out(kernel_grad_buffer, torch::transpose(in_buffer_activated, 0, 1), out_grad_buffer_activated);
 
-        // // scatter
-        // scatter_launch(neighbor_offset.data_ptr<int>()[i], in_feat.size(0), kernel.size(1), in_grad_buffer_activated.data_ptr<float>(),
-        //                grad_in_feat.data_ptr<float>(), neighbor_map.data_ptr<int>() + cur_offset, !transpose);
+        // scatter
+        n_in = neighbor_offset.data_ptr<int>()[i];
+        n_out = in_feat.size(0);
+        c = kernel.size(1);
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(in_feat.type(), "ConvolutionForwardGPU", ([&] {
+                                        scatter_kernel<scalar_t><<<ceil((double)(n_in * c) / 256), 256>>>(
+                                            n_in,
+                                            n_out,
+                                            c,
+                                            in_grad_buffer_activated.data_ptr<scalar_t>(),
+                                            grad_in_feat.data_ptr<scalar_t>(),
+                                            neighbor_map.data_ptr<int>() + cur_offset,
+                                            !transpose);
+                                    }));
 
         cur_offset += 2 * neighbor_offset.data_ptr<int>()[i];
     }
