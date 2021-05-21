@@ -36,6 +36,17 @@ __global__ void scatter_kernel(const int n_in, const int n_out, const int c,
     out_feat[out_pos * c + j] += in_feat[i * c + j];
 }
 
+// in_feat: (N, c) N=# of input points, c = input channels
+// out_feat: (M, o) M=# of output points, o = output channels
+//                  for stride=1, M=N. For stride>1, the N input coords
+//                  are requantized to M points with grid size (stride * cur_stride)
+// kernel: (k^3, c, o) for a 3D convolution of length k
+// neighbor_map: (a, 2) the hash table query results from out_coords to in_coords
+//                      where neighbor_map[:,0] is the index of the output feature
+//                      and neighbor_map[:,1] is the index of the input feature
+// neighbor_offset: (k^3) count of active weights based on neighbor_map
+//                      with unused weights having 0 and neighbor_offset[k^3/2]
+//                      holding w[0,0].
 void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
                            at::Tensor kernel, at::Tensor neighbor_map,
                            at::Tensor neighbor_offset, const bool transpose)
@@ -47,26 +58,36 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
 
     bool is_half = in_feat.scalar_type() == at::ScalarType::Half;
 
+    int n_in_feats = in_feat.size(0);
+    int n_in_channels = in_feat.size(1);
+    int n_out_feats = out_feat.size(0);
+    int n_out_channels = out_feat.size(1);
     int out_nrows = out_feat.size(0);
-    out_feat.resize_({out_nrows, kernel.size(2)});
-    out_feat.zero_();
+    //out_feat.resize_({out_nrows, kernel.size(2)});
+    //out_feat.zero_();
 
     int kernel_volume = kernel.size(0);
 
     // memory optimization
-    bool flag = false;
+    bool precompute_mid = false;
+    int mid_kernel = kernel_volume / 2;
     int in_buffer_size = 1;
-    if (kernel_volume % 2 && out_nrows == in_feat.size(0))
+    // if in_feats and out_feats have the same feature channels,
+    // and the kernel size is odd, we can make the conv for w[0,0] more efficient
+    // by precomputing it. we don't have to perform gather/scatter on w[0,0]
+    // weight because every input feat will have an output feat on w[0,0]
+    if (kernel_volume % 2 == 1 && n_in_feats == n_out_feats)
     {
-        flag = true;
+        precompute_mid = true;
         in_buffer_size = *std::max_element(neighbor_offset.data_ptr<int>(),
-                                           neighbor_offset.data_ptr<int>() + kernel_volume / 2);
+                                           neighbor_offset.data_ptr<int>() + mid_kernel);
         in_buffer_size = std::max(in_buffer_size,
-                                  *std::max_element(neighbor_offset.data_ptr<int>() + kernel_volume / 2 + 1,
+                                  *std::max_element(neighbor_offset.data_ptr<int>() + mid_kernel + 1,
                                                     neighbor_offset.data_ptr<int>() + kernel_volume));
         in_buffer_size = std::max(in_buffer_size, 1);
 
-        torch::mm_out(out_feat, in_feat, kernel[kernel_volume / 2]);
+        // (N, c) X (c, o) = (N, o)
+        torch::mm_out(out_feat, in_feat, kernel[mid_kernel]);
     }
     else
     {
@@ -76,75 +97,78 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
 
     auto options =
         torch::TensorOptions().dtype(in_feat.dtype()).device(in_feat.device());
-    auto in_buffer = torch::zeros({in_buffer_size, in_feat.size(1)}, options);
-    auto out_buffer = torch::zeros({in_buffer_size, kernel.size(2)}, options);
+    auto in_buffer = torch::zeros({in_buffer_size, n_in_channels}, options);
+    auto out_buffer = torch::zeros({in_buffer_size, n_out_channels}, options);
     int cur_offset = 0;
+    // gather/gemm/scatter on each weight 
     for (int i = 0; i < kernel_volume; i++)
-    {
-        if (flag && (i == kernel_volume / 2))
-        {
-            cur_offset += 2 * neighbor_offset.data_ptr<int>()[i];
-            continue;
-        }
-
-        if (neighbor_offset.data_ptr<int>()[i] == 0)
+    {        
+        int n_active_feats = neighbor_offset.data_ptr<int>()[i];
+        // if there's no active features for this weight, skip it
+        if (n_active_feats == 0)
         {
             continue;
         }
 
+        // if w[0,0] was precomputed above, skip it
+        if ((i == mid_kernel) && precompute_mid)
+        {
+            cur_offset += 2 * n_active_feats;
+            continue;
+        }
+
+        // in_buffer_activated (i, c) holds the input gathered features
+        // for i = n_active_feats (# of features in the activated kernel from neighbor_offset)
+        // out_buffer_activated (i, o) holds the gathered weighted output features
         at::Tensor out_buffer_activated;
         at::Tensor in_buffer_activated;
         if (is_half)
         {
             out_buffer_activated =
                 torch::from_blob(out_buffer.data_ptr<at::Half>(),
-                                 {neighbor_offset.data_ptr<int>()[i], kernel.size(2)}, options);
+                                 {n_active_feats, n_out_channels}, options);
             in_buffer_activated =
                 torch::from_blob(in_buffer.data_ptr<at::Half>(),
-                                 {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+                                 {n_active_feats, n_in_channels}, options);
         }
         else
         {
             out_buffer_activated =
                 torch::from_blob(out_buffer.data_ptr<float>(),
-                                 {neighbor_offset.data_ptr<int>()[i], kernel.size(2)}, options);
+                                 {n_active_feats, n_out_channels}, options);
             in_buffer_activated =
                 torch::from_blob(in_buffer.data_ptr<float>(),
-                                 {neighbor_offset.data_ptr<int>()[i], in_feat.size(1)}, options);
+                                 {n_active_feats, n_in_channels}, options);
         }
 
-        int n_in = in_buffer_activated.size(0);
-        int n_out = in_feat.size(0);
-        int c = kernel.size(1);
+        // gather n_active_feats dense features from N sparse input features with c feature dimensions
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(in_feat.type(), "ConvolutionForwardGPU", ([&] {
-                                        gather_kernel<scalar_t><<<ceil((double)(n_in * c) / 256), 256>>>(
-                                            n_in,
-                                            n_out,
-                                            c,
+                                        gather_kernel<scalar_t><<<ceil((double)(n_active_feats * n_in_channels) / 256), 256>>>(
+                                            n_active_feats,
+                                            n_in_feats,
+                                            n_in_channels,
                                             in_feat.data_ptr<scalar_t>(),
                                             in_buffer_activated.data_ptr<scalar_t>(),
                                             neighbor_map.data_ptr<int>() + cur_offset,
                                             transpose);
                                     }));
 
-        // gemm
+        // gemm: (i, c) X (c, o) = (i, o)
         torch::mm_out(out_buffer_activated, in_buffer_activated, kernel[i]);
 
-        n_in = neighbor_offset.data_ptr<int>()[i];
-        n_out = out_nrows;
-        c = kernel.size(2);
+        // scatter n_active_feats dense features into n_out_feats output features of dimension n_out_channels
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(in_feat.type(), "ConvolutionForwardGPU", ([&] {
-                                        scatter_kernel<scalar_t><<<ceil((double)(n_in * c) / 256), 256>>>(
-                                            neighbor_offset.data_ptr<int>()[i],
-                                            out_nrows,
-                                            kernel.size(2),
+                                        scatter_kernel<scalar_t><<<ceil((double)(n_active_feats * n_out_channels) / 256), 256>>>(
+                                            n_active_feats,
+                                            n_out_feats,
+                                            n_out_channels,
                                             out_buffer_activated.data_ptr<scalar_t>(),
                                             out_feat.data_ptr<scalar_t>(),
                                             neighbor_map.data_ptr<int>() + cur_offset,
                                             transpose);
                                     }));
 
-        cur_offset += 2 * neighbor_offset.data_ptr<int>()[i];
+        cur_offset += 2 * n_active_feats;
     }
 }
 
