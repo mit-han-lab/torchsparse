@@ -107,6 +107,9 @@ We here provides an entire training example with dummy input [here](examples/exa
 
 You are also welcomed to check out our [SPVNAS](https://github.com/mit-han-lab/e3d) project to implement training / inference with real data.
 
+### Mixed Precision (float16) Support
+
+Mixed precision training is supported via `torch.cuda.amp.autocast` and `torch.cuda.amp.GradScaler`. Enabling mixed precision training can speed up training and reduce GPU memory usage. By wrapping your training code in a `torch.cuda.amp.autocast` block, feature tensors will automatically be converted to float16 if possible. See [here](examples/example.py) for a complete example. 
 
 ## Speed Comparison Between torchsparse and MinkowskiEngine
 
