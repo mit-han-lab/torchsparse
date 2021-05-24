@@ -6,7 +6,6 @@ import torchsparse.nn as spnn
 from torchsparse import SparseTensor
 from torchsparse.utils import sparse_collate_fn, sparse_quantize
 import argparse
-import time
 
 
 def generate_random_point_cloud(size=100000, voxel_size=0.2):
@@ -32,9 +31,9 @@ def generate_random_point_cloud(size=100000, voxel_size=0.2):
     return feed_dict
 
 
-def generate_batched_random_point_clouds(size=400000,
+def generate_batched_random_point_clouds(size=100000,
                                          voxel_size=0.2,
-                                         batch_size=4):
+                                         batch_size=2):
     batch = []
     for i in range(batch_size):
         batch.append(generate_random_point_cloud(size, voxel_size))
@@ -62,7 +61,6 @@ def dummy_train(device, mixed=False):
         targets = feed_dict['targets'].F.to(device).long()
         with torch.cuda.amp.autocast(enabled=mixed):
             outputs = model(inputs)
-            print(outputs.F.dtype)
             loss = criterion(outputs.F, targets)
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -80,15 +78,5 @@ if __name__ == '__main__':
     np.random.seed(2021)
     torch.manual_seed(2021)
 
-    if args.mixed:
-        print("running in mixed precision")
-    else:
-        print("running in default precision")
-
-    start = time.time()
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     dummy_train(device, args.mixed)
-    end = time.time()
-    print("Done in: %f" % (end - start))
-    print(torch.cuda.max_memory_allocated() / 1024 / 1024)
-    print(torch.cuda.max_memory_reserved() / 1024 / 1024)

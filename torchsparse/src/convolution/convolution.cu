@@ -61,10 +61,7 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
     int n_in_feats = in_feat.size(0);
     int n_in_channels = in_feat.size(1);
     int n_out_feats = out_feat.size(0);
-    int n_out_channels = out_feat.size(1);
-    int out_nrows = out_feat.size(0);
-    //out_feat.resize_({out_nrows, kernel.size(2)});
-    //out_feat.zero_();
+    int n_out_channels = out_feat.size(1);;
 
     int kernel_volume = kernel.size(0);
 
@@ -72,10 +69,7 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
     bool precompute_mid = false;
     int mid_kernel = kernel_volume / 2;
     int in_buffer_size = 1;
-    // if in_feats and out_feats have the same feature channels,
-    // and the kernel size is odd, we can make the conv for w[0,0] more efficient
-    // by precomputing it. we don't have to perform gather/scatter on w[0,0]
-    // weight because every input feat will have an output feat on w[0,0]
+    // we can precompute features for w[0,0] which avoids gather/scatter
     if (kernel_volume % 2 == 1 && n_in_feats == n_out_feats)
     {
         precompute_mid = true;
@@ -117,9 +111,9 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
             continue;
         }
 
-        // in_buffer_activated (i, c) holds the input gathered features
+        // in_buffer_activated (i, c) holds the dense input features from gather
         // for i = n_active_feats (# of features in the activated kernel from neighbor_offset)
-        // out_buffer_activated (i, o) holds the gathered weighted output features
+        // out_buffer_activated (i, o) holds the dense output features to scatter
         at::Tensor out_buffer_activated;
         at::Tensor in_buffer_activated;
         if (is_half)
