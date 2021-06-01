@@ -1,6 +1,7 @@
 import torch
 import torchsparse_backend
 from torch.autograd import Function
+from torch.cuda.amp import custom_fwd, custom_bwd
 
 __all__ = ['spdevoxelize', 'calc_ti_weights']
 
@@ -61,6 +62,7 @@ def calc_ti_weights(pc, idx_query, scale=1.0):
 
 class DevoxelizationGPU(Function):
     @staticmethod
+    @custom_fwd(cast_inputs=torch.half)
     def forward(ctx, feat, indices, weights):
         if 'cuda' in str(feat.device):
             out = torchsparse_backend.devoxelize_forward(
@@ -77,6 +79,7 @@ class DevoxelizationGPU(Function):
         return out
 
     @staticmethod
+    @custom_bwd
     def backward(ctx, grad_out):
         indices, weights, n = ctx.for_backwards
 

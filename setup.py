@@ -24,7 +24,6 @@ file_lis = [
     'torchsparse/src/hash/hash_gpu.cu',
     'torchsparse/src/hashmap/hashmap.cu',
     'torchsparse/src/hashmap/hashmap_cpu.cpp',
-    'torchsparse/src/interpolation/devox.cpp',
     'torchsparse/src/interpolation/devox_gpu.cu',
     'torchsparse/src/interpolation/devox_deterministic.cpp',
     'torchsparse/src/interpolation/devox_deterministic_gpu.cu',
