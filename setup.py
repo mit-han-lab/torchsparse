@@ -34,7 +34,6 @@ file_lis = [
     'torchsparse/src/others/count.cpp',
     'torchsparse/src/others/count_gpu.cu',
     'torchsparse/src/others/count_cpu.cpp',
-    'torchsparse/src/others/insertion.cpp',
     'torchsparse/src/others/insertion_gpu.cu',
     'torchsparse/src/others/insertion_cpu.cpp',
     'torchsparse/src/others/query.cpp',

@@ -77,7 +77,6 @@ at::Tensor devoxelize_forward(
                                       out.data_ptr<scalar_t>());
                                       }));
 
-  //devoxelize_wrapper(N, c, indices.data_ptr<int>(), weight.data_ptr<float>(), feat.data_ptr<float>(), out.data_ptr<float>());
   return out;
 }
     
@@ -94,7 +93,7 @@ at::Tensor devoxelize_backward(
   int N = top_grad.size(0);
   at::Tensor bottom_grad = torch::zeros({n, c}, at::device(top_grad.device()).dtype(top_grad.dtype()));
 
-  AT_DISPATCH_FLOATING_TYPES_AND_HALF(top_grad.type(), "devoxelize_forward", ([&]
+  AT_DISPATCH_FLOATING_TYPES_AND_HALF(top_grad.type(), "devoxelize_backward", ([&]
                                       { devoxelize_grad_kernel<scalar_t><<<N, c>>>(
                                       N,
                                       n,
@@ -104,6 +103,6 @@ at::Tensor devoxelize_backward(
                                       top_grad.data_ptr<scalar_t>(),
                                       bottom_grad.data_ptr<scalar_t>());
                                       }));
-  //devoxelize_grad_wrapper(N, n, c, indices.data_ptr<int>(), weight.data_ptr<float>(), top_grad.data_ptr<float>(), bottom_grad.data_ptr<float>());
+                                      
   return bottom_grad;
 }

@@ -3,10 +3,6 @@
 #include <torch/torch.h>
 #include <vector>
 
-
-//CUDA forward declarations
-void insertion_wrapper(int N, int c, int s, const float * data, const int * idx, const int * counts, float * out);
-void insertion_grad_wrapper(int N, int c, int s, const float * top_grad, const int * idx, const int * counts, float * bottom_grad);
 //make sure indices is int type
 //feat: (b,c,n) indices: (b,n) -> out: (b,c,s), out_indices: (b,n) (preprocessed indices)
 
