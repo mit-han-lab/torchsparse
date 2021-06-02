@@ -1,22 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <thrust/device_vector.h>
+#include <torch/extension.h>
+#include "../common/gpu.cuh"
 
 
 //input features (n, c), indices (N, 8), weight (N, 8) -> output features (N, c)
-__global__ void devoxelize_kernel(int N, int c, const int *__restrict__ indices, const float *__restrict__ weight, const float *__restrict__ feat, float *__restrict__ out){
+template <typename scalar_t>
+__global__ void devoxelize_kernel(int N, int c, const int *__restrict__ indices, const scalar_t *__restrict__ weight, const scalar_t *__restrict__ feat, scalar_t *__restrict__ out){
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int i = index / c;
     int j = index % c;
     
     if(i < N){
         const int* indices_ = indices + 8 * i;
-        const float *weight_ = weight + 8 * i;
-        const float *feat_ = feat + j;
+        const scalar_t *weight_ = weight + 8 * i;
+        const scalar_t *feat_ = feat + j;
         
-        float cur_feat;
+        scalar_t cur_feat;
         for(int k = 0; k < 8; k++){
-            cur_feat = (indices_[k] >= 0) ? feat_[indices_[k] * c]  : 0; 
+            cur_feat = 0;
+            if (indices_[k] >= 0)
+                cur_feat = feat_[indices_[k] * c];
+
             out[i * c + j] += weight_[k] * cur_feat;
         }
             
@@ -25,7 +31,8 @@ __global__ void devoxelize_kernel(int N, int c, const int *__restrict__ indices,
 }
 
 //input weight (N, 8), indices (N, 8), top_grad (N, c) -> bottom grad (n, c)
-__global__ void devoxelize_grad_kernel(int N, int n, int c, const int *__restrict__ indices, const float *__restrict__ weight, const float *__restrict__ top_grad, float *__restrict__ bottom_grad){
+template <typename scalar_t>
+__global__ void devoxelize_grad_kernel(int N, int n, int c, const int *__restrict__ indices, const scalar_t *__restrict__ weight, const scalar_t *__restrict__ top_grad, scalar_t *__restrict__ bottom_grad){
     
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int i = index / c;
@@ -34,9 +41,9 @@ __global__ void devoxelize_grad_kernel(int N, int n, int c, const int *__restric
     
     if(i < N){
         const int* indices_ = indices + 8 * i;
-        const float *weight_ = weight + 8 * i;
+        const scalar_t *weight_ = weight + 8 * i;
         
-        float cur_top_grad = top_grad[i * c + j];
+        scalar_t cur_top_grad = top_grad[i * c + j];
         
         #pragma unroll
         for(int k = 0; k < 8; k++){
@@ -47,18 +54,55 @@ __global__ void devoxelize_grad_kernel(int N, int n, int c, const int *__restric
 }
 
 
+//make sure indices is int type
+//feat: (b,c,s) indices: (N, 3) batch_index: (N, ) -> out: (N, c)
+at::Tensor devoxelize_forward(
+    const at::Tensor feat,
+    const at::Tensor indices,
+    const at::Tensor weight
+)
+{
+  int c = feat.size(1);
+  int N = indices.size(0);
+  
+  at::Tensor out = torch::zeros({N, c}, at::device(feat.device()).dtype(feat.dtype()));
 
-void devoxelize_wrapper(int N, int c, const int * indices, const float * weight, const float * feat, float * out){
-    devoxelize_kernel<<<N, c>>>(N, c, indices, weight, feat, out);
+  AT_DISPATCH_FLOATING_TYPES_AND_HALF(feat.type(), "devoxelize_forward", ([&]
+                                      { devoxelize_kernel<scalar_t><<<N, c>>>(
+                                      N,
+                                      c,
+                                      indices.data_ptr<int>(),
+                                      weight.data_ptr<scalar_t>(),
+                                      feat.data_ptr<scalar_t>(),
+                                      out.data_ptr<scalar_t>());
+                                      }));
+
+  return out;
 }
+    
 
-void devoxelize_grad_wrapper(int N, int n, int c, const int *indices, const float * weight, const float * top_grad, float * bottom_grad){
-    devoxelize_grad_kernel<<<N, c>>>(N, n, c, indices, weight, top_grad, bottom_grad);
+//top_grad: (N, c), indices: (N, 3), batch_index: (N, ) -> bottom_grad: (b,c,s), s=r^3
+at::Tensor devoxelize_backward(
+    const at::Tensor top_grad,
+    const at::Tensor indices,
+    const at::Tensor weight,
+    int n
+)
+{
+  int c = top_grad.size(1);
+  int N = top_grad.size(0);
+  at::Tensor bottom_grad = torch::zeros({n, c}, at::device(top_grad.device()).dtype(top_grad.dtype()));
+
+  AT_DISPATCH_FLOATING_TYPES_AND_HALF(top_grad.type(), "devoxelize_backward", ([&]
+                                      { devoxelize_grad_kernel<scalar_t><<<N, c>>>(
+                                      N,
+                                      n,
+                                      c,
+                                      indices.data_ptr<int>(),
+                                      weight.data_ptr<scalar_t>(),
+                                      top_grad.data_ptr<scalar_t>(),
+                                      bottom_grad.data_ptr<scalar_t>());
+                                      }));
+                                      
+  return bottom_grad;
 }
-
-
-
-
-
-
-

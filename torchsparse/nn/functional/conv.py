@@ -3,6 +3,7 @@ import copy
 import torch
 import torchsparse_backend
 from torch.autograd import Function
+from torch.cuda.amp import custom_fwd, custom_bwd
 from torchsparse import *
 from torchsparse.nn.functional.convert_neighbor_map import *
 from torchsparse.nn.functional.downsample import *
@@ -15,6 +16,7 @@ __all__ = ['conv3d']
 
 class SpConvolution(Function):
     @staticmethod
+    @custom_fwd(cast_inputs=torch.half)
     def forward(ctx,
                 features,
                 kernel,
@@ -27,11 +29,13 @@ class SpConvolution(Function):
         if not transpose:
             out = torch.zeros(sizes[1],
                               kernel.size(-1),
+                              dtype=features.dtype,
                               device=features.device)
         else:
             # tbd: ensure the original, upsampled size to be the same.
             out = torch.zeros(sizes[0],
                               kernel.size(-1),
+                              dtype=features.dtype,
                               device=features.device)
 
         if 'cuda' in str(features.device):
@@ -61,12 +65,13 @@ class SpConvolution(Function):
         return out
 
     @staticmethod
+    @custom_bwd
     def backward(ctx, grad_out):
         features, kernel, neighbor_map, neighbor_offset, transpose = ctx.for_backwards
         K, c_in, c_out = kernel.size()
         N_in = features.size(0)
-        grad_features = torch.zeros(N_in, c_in, device=features.device)
-        grad_kernel = torch.zeros(K, c_in, c_out, device=kernel.device)
+        grad_features = torch.zeros(N_in, c_in, device=features.device, dtype=features.dtype)
+        grad_kernel = torch.zeros(K, c_in, c_out, device=kernel.device, dtype=features.dtype)
 
         if 'cuda' in str(features.device):
             torchsparse_backend.sparseconv_backward(features, grad_features,

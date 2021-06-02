@@ -2,6 +2,7 @@ import torch
 import torchsparse_backend
 from torch.autograd import Function
 from torchsparse.nn.functional.hash import *
+from torchsparse.nn.functional.voxelize import spvoxelize
 
 __all__ = ['spdownsample']
 
@@ -23,8 +24,7 @@ class DownsampleGPU(Function):
         # rounding is necessary
         # gpu
         if 'cuda' in str(coords.device):
-            uq_coords = torch.round(
-                torchsparse_backend.insertion_forward(coords_new.float(), inv,
+            uq_coords = torch.round(spvoxelize(coords_new.float(), inv,
                                                       cnt))
         elif 'cpu' in str(coords.device):
             uq_coords = torch.round(

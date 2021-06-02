@@ -31,14 +31,6 @@ void ConvolutionBackwardKernelGPU(
     const bool transpose,
     cublasHandle_t cuhandle, cudaStream_t stream);
 
-void scatter_launch(const int n_in, const int n_out, const int c,
-                    const float *in_feat, float *out_feat,
-                    const int *kmap, const bool transpose);
-
-void gather_launch(const int n_k, const int n_in, const int c,
-                   const float *in_feat, float *out_feat,
-                   const int *kmap, const bool transpose);
-
 void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
                            at::Tensor kernel, at::Tensor neighbor_map,
                            at::Tensor neighbor_offset, const bool transpose);

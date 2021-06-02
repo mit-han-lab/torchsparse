@@ -13,6 +13,7 @@
 #include <exception>
 #include <iostream>
 #include <vector>
+#include <torch/torch.h>
 
 
 //
@@ -102,6 +103,11 @@ template <typename Dtype> void print(const thrust::device_vector<Dtype> &v);
 template <typename Dtype1, typename Dtype2>
 void print(const thrust::device_vector<Dtype1> &v1,
            const thrust::device_vector<Dtype2> &v2);
+
+// atomicadd for half types (from aten/src/THC/THCAtomics.cuh)
+static inline  __device__ at::Half atomicAdd(at::Half *address, at::Half val) {
+  return atomicAdd(reinterpret_cast<__half*>(address), val);
+}
 
 // AtomicAddition for double with cuda arch <= 600
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
