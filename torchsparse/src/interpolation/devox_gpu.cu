@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <thrust/device_vector.h>
 #include <torch/extension.h>
-#include "../common/gpu.cuh"
+#include <THC/THCAtomics.cuh>
 
 
 //input features (n, c), indices (N, 8), weight (N, 8) -> output features (N, c)
