@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <cmath>
 #include <torch/torch.h>
-#include "../common/gpu.cuh"
+#include <THC/THCAtomics.cuh>
 
 //hashing
 //input N*F float tensor, pointer to output N'*F int64 tensor, N*1 count tensor, N*1 index tensor
