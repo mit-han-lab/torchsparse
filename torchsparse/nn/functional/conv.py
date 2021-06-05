@@ -3,7 +3,6 @@ import copy
 import torch
 import torchsparse_backend
 from torch.autograd import Function
-from torch.cuda.amp import custom_fwd, custom_bwd
 from torchsparse import *
 from torchsparse.nn.functional.convert_neighbor_map import *
 from torchsparse.nn.functional.downsample import *
@@ -16,7 +15,6 @@ __all__ = ['conv3d']
 
 class SpConvolution(Function):
     @staticmethod
-    @custom_fwd(cast_inputs=torch.half)
     def forward(ctx,
                 features,
                 kernel,
@@ -29,13 +27,11 @@ class SpConvolution(Function):
         if not transpose:
             out = torch.zeros(sizes[1],
                               kernel.size(-1),
-                              dtype=features.dtype,
                               device=features.device)
         else:
             # tbd: ensure the original, upsampled size to be the same.
             out = torch.zeros(sizes[0],
                               kernel.size(-1),
-                              dtype=features.dtype,
                               device=features.device)
 
         if 'cuda' in str(features.device):
@@ -65,13 +61,12 @@ class SpConvolution(Function):
         return out
 
     @staticmethod
-    @custom_bwd
     def backward(ctx, grad_out):
         features, kernel, neighbor_map, neighbor_offset, transpose = ctx.for_backwards
         K, c_in, c_out = kernel.size()
         N_in = features.size(0)
-        grad_features = torch.zeros(N_in, c_in, device=features.device, dtype=features.dtype)
-        grad_kernel = torch.zeros(K, c_in, c_out, device=kernel.device, dtype=features.dtype)
+        grad_features = torch.zeros(N_in, c_in, device=features.device)
+        grad_kernel = torch.zeros(K, c_in, c_out, device=kernel.device)
 
         if 'cuda' in str(features.device):
             torchsparse_backend.sparseconv_backward(features, grad_features,
@@ -107,16 +102,23 @@ def conv3d(inputs,
         output_tensor.kernel_maps = inputs.kernel_maps
         output_tensor.check()
     elif not transpose:
+        _stride = str(stride) if isinstance(stride, int) else \
+                str(stride.cpu().numpy().tolist())
         kernel_map = inputs.kernel_maps.get(
-            'k%s_os%d_s%d_d%d' % (kernel_size, cur_stride, stride, dilation),
+            'k%s_os%d_s%s_d%d' % (kernel_size, cur_stride, _stride, dilation),
             None)
 
-        if stride > 1:
+        if isinstance(stride, int):
+            do_downsample = stride > 1
+        else:
+            do_downsample = torch.any(stride > 1).item()
+
+        if do_downsample:
             # do downsample
             kRegion = KernelRegion(kernel_size=kernel_size,
                                    tensor_stride=cur_stride)
             kOffset = kRegion.get_kernel_offset().to(features.device)
-            new_coords = spdownsample(coords, stride * cur_stride)
+            new_coords = spdownsample(coords, stride, kernel_size, cur_stride)
             hash_query = sphash(new_coords, kOffset)
             hash_target = sphash(coords)
             idx_query = sphashquery(hash_query, hash_target)
@@ -131,9 +133,15 @@ def conv3d(inputs,
                                          cur_stride * stride)
             output_tensor.coord_maps = copy.deepcopy(inputs.coord_maps)
             output_tensor.check()
+            _stride = str(stride) if isinstance(stride, int) else \
+                str(stride[0].cpu().int().numpy().tolist())
+            if isinstance(stride, torch.Tensor):
+                _os = torch.ones_like(stride) * cur_stride
+            _os = str(cur_stride) if isinstance(stride, int) else \
+                str(_os[0].cpu().int().numpy().tolist())
             output_tensor.kernel_maps = copy.deepcopy(inputs.kernel_maps)
-            output_tensor.kernel_maps['k%s_os%d_s%d_d%d' %
-                                      (kernel_size, cur_stride, stride,
+            output_tensor.kernel_maps['k%s_os%s_s%s_d%d' %
+                                      (kernel_size, _os, _stride,
                                        dilation)] = idx_query + [sizes]
 
         else:
@@ -176,17 +184,34 @@ def conv3d(inputs,
 
     else:
         # do upsample
-        original_stride = int(cur_stride / stride)
+        if isinstance(stride, int):
+            original_stride = int(cur_stride / stride)
+            _original_stride = original_stride
+            _stride = stride
+        else:
+            cur_stride_tensor = torch.ones_like(stride) * cur_stride
+            original_stride = cur_stride_tensor / stride
+            _original_stride = str(original_stride[0].cpu().int().numpy().tolist())
+            _stride = str(stride[0].cpu().int().numpy().tolist())
+        
         kernel_map = inputs.kernel_maps.get(
-            'k%s_os%d_s%d_d%d' %
-            (kernel_size, original_stride, stride, dilation), None)
+            'k%s_os%s_s%s_d%d' %
+            (kernel_size, _original_stride, _stride, dilation), None)
+        assert kernel_map is not None, 'kernel map k%s_os%s_s%s_d%d'%(
+            kernel_size, _original_stride, _stride, dilation
+        ) + ' does not exist.'
         output_features = sparseconv_op(features, kernel, kernel_map[0],
                                         kernel_map[1], kernel_map[2],
                                         transpose)
         if bias is not None:
             output_features += bias
+        
+        if _original_stride in inputs.coord_maps:
+            cur_coords = inputs.coord_maps[_original_stride]
+        else:
+            cur_coords = inputs.coord_maps[original_stride[0][0].item()]
         output_tensor = SparseTensor(output_features,
-                                     inputs.coord_maps[original_stride],
+                                     cur_coords,
                                      original_stride)
         output_tensor.coord_maps = inputs.coord_maps
         output_tensor.check()

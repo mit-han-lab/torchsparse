@@ -1,12 +1,13 @@
 import numpy as np
 import torch
+from typing import Union
 
 __all__ = ['KernelRegion']
 
 
 class KernelRegion:
     def __init__(self,
-                 kernel_size: int = 3,
+                 kernel_size: Union[int, list, tuple] = 3,
                  tensor_stride: int = 1,
                  dilation: int = 1,
                  dim=[0, 1, 2]) -> None:
@@ -66,3 +67,5 @@ class KernelRegion:
 
     def get_kernel_offset(self):
         return self.kernel_offset
+
+

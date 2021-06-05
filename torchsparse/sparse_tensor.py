@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 __all__ = ['SparseTensor']
@@ -10,10 +11,23 @@ class SparseTensor:
         self.s = stride
         self.coord_maps = {}
         self.kernel_maps = {}
-
+        if isinstance(self.C, torch.Tensor):
+            self.C[:, :3] -= self.C[:, :3].min(0, keepdims=True).values
+        else:
+            assert isinstance(self.C, np.ndarray)
+            self.C[:, :3] -= self.C[:, :3].min(0, keepdims=True)
+        
     def check(self):
         if self.s not in self.coord_maps:
-            self.coord_maps[self.s] = self.C
+            if isinstance(self.s, int):
+                self.coord_maps[self.s] = self.C
+            else:
+                assert isinstance(self.s, torch.Tensor)
+                if len(self.s.shape) > 1:
+                    key = str(self.s[0].cpu().int().numpy())
+                else:
+                    key = str(self.s.cpu().int().numpy())
+                self.coord_maps[key] = self.C
 
     def cuda(self):
         assert type(self.F) == torch.Tensor
@@ -41,3 +55,5 @@ class SparseTensor:
         tensor.coord_maps = self.coord_maps
         tensor.kernel_maps = self.kernel_maps
         return tensor
+
+
