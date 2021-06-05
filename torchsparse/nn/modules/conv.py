@@ -60,14 +60,16 @@ class Conv3d(nn.Module):
             assert not transpose
 
     def __repr__(self):
+        _stride = str(self.stride) if isinstance(self.stride,
+            int) else str(self.stride[0].cpu().numpy().tolist())
         if not self.t:
-            return 'Conv3d(in_channels=%d, out_channels=%d, kernel_size=%d, stride=%s, dilation=%d)' % (
-                self.in_channels, self.out_channels, self.kernel_size,
-                str(self.stride), self.dilation)
+            return 'Conv3d(in_channels=%d, out_channels=%d, kernel_size=%s, stride=%s, dilation=%d)' % (
+                self.in_channels, self.out_channels, str(self.kernel_size),
+                _stride, self.dilation)
         else:
-            return 'Conv3d(in_channels=%d, out_channels=%d, kernel_size=%d, stride=%s, dilation=%d)' % (
-                self.in_channels, self.out_channels, self.kernel_size,
-                str(self.stride), self.dilation)
+            return 'Conv3d(in_channels=%d, out_channels=%d, kernel_size=%s, stride=%s, dilation=%d)' % (
+                self.in_channels, self.out_channels, str(self.kernel_size),
+                _stride, self.dilation)
 
     def reset_parameters(self):
         std = 1. / math.sqrt(
