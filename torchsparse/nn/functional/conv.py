@@ -3,6 +3,7 @@ import copy
 import torch
 import torchsparse_backend
 from torch.autograd import Function
+from torch.cuda.amp import custom_fwd, custom_bwd
 from torchsparse import *
 from torchsparse.nn.functional.convert_neighbor_map import *
 from torchsparse.nn.functional.downsample import *
