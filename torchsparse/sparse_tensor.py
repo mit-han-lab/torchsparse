@@ -11,11 +11,6 @@ class SparseTensor:
         self.s = stride
         self.coord_maps = {}
         self.kernel_maps = {}
-        if isinstance(self.C, torch.Tensor):
-            self.C[:, :3] -= self.C[:, :3].min(0, keepdims=True).values
-        else:
-            assert isinstance(self.C, np.ndarray)
-            self.C[:, :3] -= self.C[:, :3].min(0, keepdims=True)
         
     def check(self):
         if self.s not in self.coord_maps:
