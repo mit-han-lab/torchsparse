@@ -8,7 +8,6 @@ from ..functional import *
 
 from typing import Union
 
-
 __all__ = [
     'Conv3d', 'ToBEVConvolution', 'ToBEVReduction', 'ToDenseBEVConvolution',
     'ToBEVHeightCompression'
@@ -33,7 +32,7 @@ class Conv3d(nn.Module):
         else:
             assert isinstance(stride, list)
             self.stride = torch.cuda.FloatTensor(stride).unsqueeze(0)
-                
+
         self.dilation = dilation
         if not isinstance(kernel_size, (list, tuple)):
             self.kernel_volume = self.kernel_size ** 3
@@ -60,16 +59,16 @@ class Conv3d(nn.Module):
             assert not transpose
 
     def __repr__(self):
-        _stride = str(self.stride) if isinstance(self.stride,
-            int) else str(self.stride[0].cpu().numpy().tolist())
+        _stride = str(self.stride) if isinstance(self.stride, int) else str(
+            self.stride[0].cpu().numpy().tolist())
         if not self.t:
             return 'Conv3d(in_channels=%d, out_channels=%d, kernel_size=%s, stride=%s, dilation=%d)' % (
-                self.in_channels, self.out_channels, str(self.kernel_size),
-                _stride, self.dilation)
+                self.in_channels, self.out_channels, str(
+                    self.kernel_size), _stride, self.dilation)
         else:
             return 'Conv3d(in_channels=%d, out_channels=%d, kernel_size=%s, stride=%s, dilation=%d)' % (
-                self.in_channels, self.out_channels, str(self.kernel_size),
-                _stride, self.dilation)
+                self.in_channels, self.out_channels, str(
+                    self.kernel_size), _stride, self.dilation)
 
     def reset_parameters(self):
         std = 1. / math.sqrt(
@@ -205,6 +204,7 @@ class ToDenseBEVConvolution(nn.Module):
         outputs = outputs.permute(0, 3, 1, 2).contiguous()
         return outputs
 
+
 class ToBEVHeightCompression(nn.Module):
     def __init__(self,
                  channels: int,
@@ -219,20 +219,16 @@ class ToBEVHeightCompression(nn.Module):
         self.bev_dims = [i for i in range(3) if i != self.dim]
         self.bev_shape = shape[self.bev_dims].int()
         self.shape = shape.int()
-    
+
     def __repr__(self):
-        return 'ToBEVHeightCompression(channels=%d)' % (
-            self.channels)
-    
+        return 'ToBEVHeightCompression(channels=%d)' % (self.channels)
+
     def forward(self, inputs: SparseTensor):
         coords, feats, stride = inputs.C, inputs.F, inputs.s
         # [b, x, y, z]
-        coords = (coords - self.offset).t()[
-            [3] + self.bev_dims + [self.dim]
-        ].long()
-        shape = self.shape[
-            self.bev_dims + [self.dim]
-        ]
+        coords = (coords - self.offset).t()[[3] + self.bev_dims +
+                                            [self.dim]].long()
+        shape = self.shape[self.bev_dims + [self.dim]]
         if not isinstance(stride, int):
             dim = self.dim
             stride = stride[:, self.bev_dims + [self.dim]]
@@ -245,9 +241,8 @@ class ToBEVHeightCompression(nn.Module):
         outputs = torch.cuda.sparse.FloatTensor(
             indices.unsqueeze(0),
             feats,
-            torch.Size(
-                [batch_size * int(self.shape.prod()),
-                 feats.size(-1)]),
+            torch.Size([batch_size * int(self.shape.prod()),
+                        feats.size(-1)]),
         ).to_dense()
         outputs = outputs.view(batch_size, *self.bev_shape.cpu().numpy(), -1)
         outputs = outputs.permute(0, 3, 1, 2).contiguous()

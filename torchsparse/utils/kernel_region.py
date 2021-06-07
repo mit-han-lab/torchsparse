@@ -67,5 +67,3 @@ class KernelRegion:
 
     def get_kernel_offset(self):
         return self.kernel_offset
-
-

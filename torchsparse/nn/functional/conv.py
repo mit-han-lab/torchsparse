@@ -70,8 +70,15 @@ class SpConvolution(Function):
         features, kernel, neighbor_map, neighbor_offset, transpose = ctx.for_backwards
         K, c_in, c_out = kernel.size()
         N_in = features.size(0)
-        grad_features = torch.zeros(N_in, c_in, device=features.device, dtype=features.dtype)
-        grad_kernel = torch.zeros(K, c_in, c_out, device=kernel.device, dtype=features.dtype)
+        grad_features = torch.zeros(N_in,
+                                    c_in,
+                                    device=features.device,
+                                    dtype=features.dtype)
+        grad_kernel = torch.zeros(K,
+                                  c_in,
+                                  c_out,
+                                  device=kernel.device,
+                                  dtype=features.dtype)
 
         if 'cuda' in str(features.device):
             torchsparse_backend.sparseconv_backward(features, grad_features,
@@ -196,27 +203,27 @@ def conv3d(inputs,
         else:
             cur_stride_tensor = torch.ones_like(stride) * cur_stride
             original_stride = cur_stride_tensor / stride
-            _original_stride = str(original_stride[0].cpu().int().numpy().tolist())
+            _original_stride = str(
+                original_stride[0].cpu().int().numpy().tolist())
             _stride = str(stride[0].cpu().int().numpy().tolist())
-        
+
         kernel_map = inputs.kernel_maps.get(
             'k%s_os%s_s%s_d%d' %
             (kernel_size, _original_stride, _stride, dilation), None)
-        assert kernel_map is not None, 'kernel map k%s_os%s_s%s_d%d'%(
-            kernel_size, _original_stride, _stride, dilation
-        ) + ' does not exist.'
+        assert kernel_map is not None, 'kernel map k%s_os%s_s%s_d%d' % (
+            kernel_size, _original_stride, _stride,
+            dilation) + ' does not exist.'
         output_features = sparseconv_op(features, kernel, kernel_map[0],
                                         kernel_map[1], kernel_map[2],
                                         transpose)
         if bias is not None:
             output_features += bias
-        
+
         if _original_stride in inputs.coord_maps:
             cur_coords = inputs.coord_maps[_original_stride]
         else:
             cur_coords = inputs.coord_maps[original_stride[0][0].item()]
-        output_tensor = SparseTensor(output_features,
-                                     cur_coords,
+        output_tensor = SparseTensor(output_features, cur_coords,
                                      original_stride)
         output_tensor.coord_maps = inputs.coord_maps
         output_tensor.check()

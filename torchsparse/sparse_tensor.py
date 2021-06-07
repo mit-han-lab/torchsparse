@@ -11,7 +11,7 @@ class SparseTensor:
         self.s = stride
         self.coord_maps = {}
         self.kernel_maps = {}
-        
+
     def check(self):
         if self.s not in self.coord_maps:
             if isinstance(self.s, int):
@@ -50,5 +50,3 @@ class SparseTensor:
         tensor.coord_maps = self.coord_maps
         tensor.kernel_maps = self.kernel_maps
         return tensor
-
-
