@@ -26,7 +26,7 @@ HashTableCPU::lookup_vals(const int64_t * const keys, int64_t * const results, c
 
 
 
-int
+void
 HashTableCPU::insert_vals(const int64_t * const keys, const int64_t * const vals, const int n) {
     for(int i = 0; i < 10; i++){
         printf("%d, %d, %d, %d\n", i, i<n, n, i<10);
