@@ -1,11 +1,9 @@
 import torch
-import torchsparse_backend
-from torch.autograd import Function
 
-__all__ = ['convert_neighbor_map_gpu']
+__all__ = ['squeeze_nmap']
 
 
-def convert_neighbor_map_gpu(neighbor_map):
+def squeeze_nmap(neighbor_map):
     idx_batch, idx_point = torch.where(neighbor_map != -1)
     map_converted = neighbor_map.view(-1)[idx_batch * neighbor_map.size(1) +
                                           idx_point]

@@ -1,29 +1,32 @@
-import numpy as np
+from collections import namedtuple
 import torch
+from typing import Union, List, Tuple
 
-__all__ = ['SparseTensor']
+__all__ = ['SparseTensor', 'KernelMapConfig']
+
+KernelMapConfig = namedtuple('KernelMapConfig', ['kernel_size', 'cur_stride', 'stride', 'dilation'])
 
 
 class SparseTensor:
-    def __init__(self, feats, coords, stride=1):
+    def __init__(self, 
+                 feats, 
+                 coords, 
+                 stride: Union[int, List[int], Tuple[int, int, int]] = 1):
         self.F = feats
         self.C = coords
-        self.s = stride
+        if isinstance(stride, int):
+            self.s = (stride, stride, stride)
+        elif isinstance(stride, list):
+            self.s = tuple(stride)
+        else:
+            self.s = stride
         self.coord_maps = {}
         self.kernel_maps = {}
 
     def check(self):
         if self.s not in self.coord_maps:
-            if isinstance(self.s, int):
-                self.coord_maps[self.s] = self.C
-            else:
-                assert isinstance(self.s, torch.Tensor)
-                if len(self.s.shape) > 1:
-                    key = str(self.s[0].cpu().int().numpy())
-                else:
-                    key = str(self.s.cpu().int().numpy())
-                self.coord_maps[key] = self.C
-
+            self.coord_maps[self.s] = self.C
+        
     def cuda(self):
         assert type(self.F) == torch.Tensor
         assert type(self.C) == torch.Tensor
@@ -50,3 +53,5 @@ class SparseTensor:
         tensor.coord_maps = self.coord_maps
         tensor.kernel_maps = self.kernel_maps
         return tensor
+
+
