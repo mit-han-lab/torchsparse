@@ -5,8 +5,13 @@
 #include <cuda_runtime.h>
 #include <driver_types.h>
 #include <chrono>
+#include <unistd.h>
+#include <string>
 #include <algorithm>
 #include "convolution_gpu.h"
+#include "../common/tools.h"
+
+static std::atomic_int counter(-982);
 
 template <typename scalar_t>
 __global__ void gather_kernel(const int n_k, const int n_in, const int c, 
@@ -55,6 +60,9 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
     {
         throw std::invalid_argument("Input feature size and kernel size mismatch");
     }
+    double time_mm = 0.;
+    std::string input_fname;
+    std::string kernel_fname;
 
     bool is_half = in_feat.scalar_type() == at::ScalarType::Half;
 
@@ -80,8 +88,20 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
                                                     neighbor_offset.data_ptr<int>() + kernel_volume));
         in_buffer_size = std::max(in_buffer_size, 1);
 
+        auto ts = get_time();
         // (N, c) X (c, o) = (N, o)
         torch::mm_out(out_feat, in_feat, kernel[mid_kernel]);
+        time_mm += std::chrono::duration_cast<std::chrono::microseconds>(get_time() - ts).count() / 1e6;
+        
+        input_fname = std::string("mm_files/in_feat") + "_" + std::to_string(counter) + ".pt";
+        kernel_fname = std::string("mm_files/kernel") + "_" + std::to_string(mid_kernel) + "_" + std::to_string(counter) + ".pt";
+        
+        if (counter >= 0) {
+            printf("Saving %s and %s\n", input_fname.c_str(), kernel_fname.c_str());
+            torch::save(in_feat, input_fname);
+            torch::save(kernel[mid_kernel], kernel_fname);
+        }
+        counter ++;
     }
     else
     {
@@ -146,9 +166,21 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
                                             neighbor_map.data_ptr<int>() + cur_offset,
                                             transpose);
                                     }));
-
+        
+        auto ts = get_time();
         // gemm: (i, c) X (c, o) = (i, o)
         torch::mm_out(out_buffer_activated, in_buffer_activated, kernel[i]);
+        time_mm += std::chrono::duration_cast<std::chrono::microseconds>(get_time() - ts).count() / 1e6;
+        
+        input_fname = std::string("mm_files/in_feat") + "_" + std::to_string(counter) + ".pt";
+        kernel_fname = std::string("mm_files/kernel") + "_" + std::to_string(i) + "_" + std::to_string(counter) + ".pt";
+        
+        if (counter >= 0) {
+            printf("Saving %s and %s\n", input_fname.c_str(), kernel_fname.c_str());
+            torch::save(in_buffer_activated, input_fname);
+            torch::save(kernel[i], kernel_fname);
+        }
+        counter ++;
 
         // scatter n_active_feats dense features into n_out_feats output features of dimension n_out_channels
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(in_feat.type(), "ConvolutionForwardGPU", ([&] {
@@ -164,6 +196,11 @@ void ConvolutionForwardGPU(at::Tensor in_feat, at::Tensor out_feat,
 
         cur_offset += 2 * n_active_feats;
     }
+    printf("{'mm_time': %lf}\n", time_mm);
+    FILE *fp;
+    fp = fopen("mm_time.txt", "a");
+    fprintf(fp, "{'mm_time': %lf}\n", time_mm); 
+    fclose(fp);
 }
 
 void ConvolutionBackwardGPU(

@@ -16,6 +16,7 @@ from torchsparse import __version__
 
 file_lis = [
     'torchsparse/src/torchsparse_bindings_gpu.cpp',
+    'torchsparse/src/common/tools.cpp',
     'torchsparse/src/convolution/convolution_cpu.cpp',
     'torchsparse/src/convolution/convolution.cu',
     'torchsparse/src/convolution/convolution_gpu.cu',
