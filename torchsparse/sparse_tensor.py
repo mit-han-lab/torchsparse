@@ -4,13 +4,14 @@ from typing import Union, List, Tuple
 
 __all__ = ['SparseTensor', 'KernelMapConfig']
 
-KernelMapConfig = namedtuple('KernelMapConfig', ['kernel_size', 'cur_stride', 'stride', 'dilation'])
+KernelMapConfig = namedtuple(
+    'KernelMapConfig', ['kernel_size', 'cur_stride', 'stride', 'dilation'])
 
 
 class SparseTensor:
-    def __init__(self, 
-                 feats, 
-                 coords, 
+    def __init__(self,
+                 feats,
+                 coords,
                  stride: Union[int, List[int], Tuple[int, int, int]] = 1):
         self.F = feats
         self.C = coords
@@ -26,7 +27,7 @@ class SparseTensor:
     def check(self):
         if self.s not in self.coord_maps:
             self.coord_maps[self.s] = self.C
-        
+
     def cuda(self):
         assert type(self.F) == torch.Tensor
         assert type(self.C) == torch.Tensor
@@ -53,5 +54,3 @@ class SparseTensor:
         tensor.coord_maps = self.coord_maps
         tensor.kernel_maps = self.kernel_maps
         return tensor
-
-

@@ -35,7 +35,7 @@ class Conv3d(nn.Module):
         else:
             self.stride = stride
         self.dilation = dilation
-        
+
         if not isinstance(kernel_size, (list, tuple)):
             self.kernel_volume = self.kernel_size ** 3
             self.kernel = nn.Parameter(
@@ -63,10 +63,12 @@ class Conv3d(nn.Module):
     def __repr__(self):
         if not self.t:
             return 'Conv3d(in_channels={}, out_channels={}, kernel_size={}, stride={}, dilation={})'.format(
-                self.in_channels, self.out_channels, self.kernel_size, self.stride, self.dilation)
+                self.in_channels, self.out_channels, self.kernel_size,
+                self.stride, self.dilation)
         else:
             return 'Conv3dTranspose(in_channels={}, out_channels={}, kernel_size={}, stride={}, dilation={})'.format(
-                self.in_channels, self.out_channels, self.kernel_size, self.stride, self.dilation)
+                self.in_channels, self.out_channels, self.kernel_size,
+                self.stride, self.dilation)
 
     def reset_parameters(self):
         std = 1. / math.sqrt(
@@ -138,9 +140,7 @@ class ToBEVConvolution(nn.Module):
         coords, feats, stride = inputs.C, inputs.F, inputs.s
         ratio = stride * self.stride
         if isinstance(stride, tuple):
-            stride = torch.Tensor(stride).unsqueeze(0).to(feats)[
-                :, self.dim
-            ]
+            stride = torch.Tensor(stride).unsqueeze(0).to(feats)[:, self.dim]
 
         kernels = torch.index_select(self.kernel, 0,
                                      coords[:, self.dim].long() // stride)
@@ -187,9 +187,7 @@ class ToDenseBEVConvolution(nn.Module):
     def forward(self, inputs: SparseTensor) -> SparseTensor:
         coords, feats, stride = inputs.C, inputs.F, inputs.s
         if isinstance(stride, tuple):
-            stride = torch.Tensor(stride).unsqueeze(0).to(feats)[
-                :, self.dim
-            ]
+            stride = torch.Tensor(stride).unsqueeze(0).to(feats)[:, self.dim]
 
         kernel = torch.index_select(self.kernel, 0,
                                     (coords[:, self.dim] // stride).long())
@@ -233,7 +231,7 @@ class ToBEVHeightCompression(nn.Module):
         coords, feats, stride = inputs.C, inputs.F, inputs.s
         if isinstance(stride, tuple):
             stride = torch.Tensor(stride).unsqueeze(0).to(feats)
-        
+
         # [b, x, y, z]
         coords = (coords - self.offset).t()[[3] + self.bev_dims +
                                             [self.dim]].long()

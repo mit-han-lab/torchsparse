@@ -8,7 +8,8 @@ __all__ = ['KernelRegion']
 class KernelRegion:
     def __init__(self,
                  kernel_size: Union[int, List[int], Tuple[int, int, int]] = 3,
-                 tensor_stride: Union[int, List[int], Tuple[int, int, int], torch.Tensor] = 1,
+                 tensor_stride: Union[int, List[int], Tuple[int, int, int],
+                                      torch.Tensor] = 1,
                  dilation: Union[int, List[int], Tuple[int, int, int]] = 1,
                  dim: List[int] = [0, 1, 2]) -> None:
         self.kernel_size = kernel_size
@@ -23,7 +24,7 @@ class KernelRegion:
         self.dilation = dilation
         assert len(self.tensor_stride) == 3, 'Wrong tensor_stride'
         assert len(self.dilation) == 3, 'Wrong dilation'
-        
+
         ts = self.tensor_stride
         d = self.dilation
 
