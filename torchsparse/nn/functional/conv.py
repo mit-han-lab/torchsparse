@@ -135,11 +135,7 @@ def conv3d(inputs: SparseTensor,
                                          dilation)
         kernel_map = inputs.kernel_maps.get(kernel_map_key, None)
 
-        do_downsample = False
-        for i in range(3):
-            if stride[i] > 1:
-                do_downsample = True
-                break
+        do_downsample = any(x > 1 for x in stride)
 
         if do_downsample:
             # do downsample
