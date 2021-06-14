@@ -11,7 +11,7 @@ at::Tensor cpu_insertion_forward(
 
   int N = inputs.size(0);
   int c = inputs.size(1);
-  int N1 = counts.size(0);
+  //int N1 = counts.size(0);
   at::Tensor out = torch::zeros({N1, c}, at::device(idx.device()).dtype(at::ScalarType::Float));
   for (int i = 0; i < N; i++)
   {
