@@ -5,29 +5,23 @@ import argparse
 import torch
 import time
 import tvm
-from tvm import te
+from tvm import te, topi
+
+from utils import load_tensor, read_mm_time
 
 
-def load_tensor(fname, dir="mm_files"):
-    model = torch.jit.load(os.path.join(dir, fname))
-    x = list(model.parameters())[0]
-    return x.detach()
-
-
-def read_mm_time(fname="mm_time.txt"):
-    with open(fname, "r") as f:
-        lines = f.readlines()
-    times = [float(x.split()[-1][:-1]) for x in lines]
-    return sum(times)
-
-
-def matmul():
+def matmul(n=None, m=None, l=None):
     """Return the computing expression of matrix multiplication
     A : n x l matrix
     B : l x m matrix
     C : n x m matrix with C = A B
     """
-    n, m, l = te.var(name='n'), te.var(name='m'), te.var(name='l')
+    if n == None:
+        n = te.var(name='n')
+    if m == None:
+        m = te.var(name='m')
+    if l == None:
+        l = te.var(name='l')
     k = te.reduce_axis((0, l), name='k')
     A = te.placeholder((n, l), name='A')
     B = te.placeholder((l, m), name='B')
@@ -79,8 +73,8 @@ def bench_matmul_tvm(i, k, o, mod, ctx):
     return time
 
  
-def matmul_gpu(block_size=16, tx=8, ty=4, tk=32):
-    A, B, C = matmul()
+def matmul_d2l(block_size=16, tx=8, ty=4, tk=32, n=None, m=None, l=None):
+    A, B, C = matmul(n, m, l)
     s = te.create_schedule(C.op)
     # Create caches
     A_shared = s.cache_read(A, "shared", [C])
@@ -118,6 +112,26 @@ def matmul_gpu(block_size=16, tx=8, ty=4, tk=32):
     return s, (A, B, C)
 
 
+def matmul_topi(n=None, m=None, l=None):
+    if n == None:
+        n = te.var(name='n')
+    if m == None:
+        m = te.var(name='m')
+    if l == None:
+        l = te.var(name='l')
+
+    A = te.placeholder((n, l), name='A')
+    B = te.placeholder((m, l), name='B')
+    with tvm.target.cuda():
+        if n < 32:
+            C = topi.cuda.dense_small_batch(A, B)
+            s = topi.cuda.schedule_dense_small_batch(C)
+        else:
+            C = topi.cuda.dense_large_batch(A, B)
+            s = topi.cuda.schedule_dense_large_batch(C)
+    return s, (A, B, C)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda')
@@ -127,13 +141,14 @@ if __name__ == '__main__':
     measure_steps = args.measure_steps
         
     torch.manual_seed(1)
+    torch.backends.cudnn.enabled = False
 
     input_fnames = [x for x in os.listdir("mm_files") if x.startswith('in_feat')]
     input_fnames.sort(key = lambda x: int(x.split('_')[-1].split('.')[0]))
     kernel_fnames = [x for x in os.listdir("mm_files") if x.startswith('kernel')]
     kernel_fnames.sort(key = lambda x: int(x.split('_')[-1].split('.')[0]))
 
-    s, args = matmul_gpu()
+    s, args = matmul_d2l()
     target = 'cuda'
     mod = tvm.build(s, args, target)
     ctx = tvm.context(target, 0)
@@ -144,6 +159,8 @@ if __name__ == '__main__':
     for i in tqdm(range(len(input_fnames))):
         input_fname, kernel_fname = input_fnames[i], kernel_fnames[i]
         in_feat, kernel = load_tensor(input_fname), load_tensor(kernel_fname)
+
+        print(i, in_feat.shape, kernel.shape)
 
         with torch.no_grad():
             for idx in range(1 + measure_steps):
@@ -157,7 +174,6 @@ if __name__ == '__main__':
 
         in_feat, kernel = in_feat.cpu().numpy(), kernel.cpu().numpy()
         out_feat = np.empty_like(np.zeros((in_feat.shape[0], kernel.shape[-1]))).astype(in_feat.dtype)
-        timer = mod.time_evaluator(mod.entry_name, ctx=ctx, number=1)
 
         for idx in range(1 + measure_steps):
             a, b, c = [tvm.nd.array(x, ctx=ctx) for x in [in_feat, kernel, out_feat]]
@@ -171,7 +187,7 @@ if __name__ == '__main__':
                 time_wallclock_lst[idx-1] += (ed-st)
                 time_tvm_lst[idx-1] += time_tvm
 
-    print(f"tvm matmul total time: {np.mean(time_tvm_lst)} ± {np.std(time_tvm_lst)}")
+    print(f"tvm matmul total kernel time: {np.mean(time_tvm_lst)} ± {np.std(time_tvm_lst)}")
     print(f"tvm matmul total wallclock time: {np.mean(time_wallclock_lst)} ± {np.std(time_wallclock_lst)}")
     print(f"torch.mm total time: {np.mean(time_baseline_lst)} ± {np.std(time_baseline_lst)}")
     print(f"torch:mm_out total time {read_mm_time()}")
