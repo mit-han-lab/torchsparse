@@ -5,6 +5,10 @@ import torch
 from torchsparse import SparseTensor
 
 
+__all__ = ['ravel_hash_vec', 'sparse_quantize', 'sparse_collate', 
+           'sparse_collate_fn', 'sparse_collate_tensors', 'make_tuple']
+
+
 def ravel_hash_vec(arr):
     assert arr.ndim == 2
     arr -= arr.min(0)
@@ -237,3 +241,17 @@ def sparse_collate_fn(batch):
             else:
                 ans_dict += [sample[i] for sample in batch],
         return ans_dict
+    
+
+def make_tuple(inputs, dimension=3):
+    if isinstance(inputs, int):
+        outputs = tuple()
+        for d in range(dimension):
+            outputs += inputs,
+        return outputs
+    elif isinstance(inputs, list):
+        assert len(inputs) == dimension, 'Input length and dimension mismatch'
+        return tuple(inputs)
+    elif isinstance(inputs, tuple):
+        assert len(inputs) == dimension, 'Input length and dimension mismatch'
+        return inputs

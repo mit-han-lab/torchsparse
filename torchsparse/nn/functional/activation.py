@@ -1,7 +1,7 @@
 import functools
 
 from torch.nn import functional as F
-from torchsparse.sparse_tensor import *
+from torchsparse.sparse_tensor import SparseTensor
 
 __all__ = ['spact', 'sprelu', 'spleaky_relu']
 

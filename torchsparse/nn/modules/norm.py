@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torchsparse.sparse_tensor import *
+from torchsparse.sparse_tensor import SparseTensor
 
 __all__ = ['BatchNorm', 'GroupNorm']
 

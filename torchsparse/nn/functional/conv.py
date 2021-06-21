@@ -4,14 +4,12 @@ import torch
 import torchsparse_backend
 from torch.autograd import Function
 from torch.cuda.amp import custom_fwd, custom_bwd
-from torchsparse import *
-from torchsparse.nn.functional.squeeze_nmap import *
-from torchsparse.nn.functional.downsample import *
-from torchsparse.nn.functional.hash import *
-from torchsparse.nn.functional.query import *
-from torchsparse.utils.kernel_region import *
+from torchsparse import SparseTensor
+from  torchsparse.nn import functional as spF
+from torchsparse.utils.helpers import make_tuple
+from torchsparse.utils.kernel import KernelRegion, KernelMapKey
 
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Optional
 
 __all__ = ['conv3d']
 
@@ -99,7 +97,7 @@ sparseconv_op = SpConvolution.apply
 def conv3d(inputs: SparseTensor,
            kernel: torch.Tensor,
            kernel_size: Union[int, List[int], Tuple[int, int, int]],
-           bias: torch.Tensor = None,
+           bias: Optional[torch.Tensor] = None,
            stride: Union[int, List[int], Tuple[int, int, int]] = 1,
            dilation: Union[int, List[int], Tuple[int, int, int]] = 1,
            transpose=False):
@@ -108,18 +106,9 @@ def conv3d(inputs: SparseTensor,
     cur_stride = inputs.s
 
     # convert to hashable types
-    if isinstance(kernel_size, list):
-        kernel_size = tuple(kernel_size)
-    elif isinstance(kernel_size, int):
-        kernel_size = (kernel_size, kernel_size, kernel_size)
-    if isinstance(stride, list):
-        stride = tuple(stride)
-    elif isinstance(stride, int):
-        stride = (stride, stride, stride)
-    if isinstance(kernel_size, list):
-        dilation = tuple(dilation)
-    elif isinstance(dilation, int):
-        dilation = (dilation, dilation, dilation)
+    kernel_size = make_tuple(kernel_size)
+    stride = make_tuple(stride)
+    dilation = make_tuple(dilation)
 
     if kernel_size == (1, 1, 1) and stride == (1, 1, 1) and dilation == (1, 1,
                                                                          1):
@@ -131,26 +120,24 @@ def conv3d(inputs: SparseTensor,
         output_tensor.kernel_maps = inputs.kernel_maps
         output_tensor.check()
     elif not transpose:
-        kernel_map_key = KernelMapConfig(kernel_size, cur_stride, stride,
+        kernel_map_key = KernelMapKey(kernel_size, cur_stride, stride,
                                          dilation)
         kernel_map = inputs.kernel_maps.get(kernel_map_key, None)
 
-        do_downsample = any(x > 1 for x in stride)
-
-        if do_downsample:
+        if any(x > 1 for x in stride):
             # do downsample
             kRegion = KernelRegion(kernel_size=kernel_size,
                                    tensor_stride=cur_stride)
             kOffset = kRegion.get_kernel_offset().to(features.device)
-            new_coords = spdownsample(
+            new_coords = spF.spdownsample(
                 coords,
-                torch.IntTensor(stride).to(features.device).unsqueeze(0),
+                stride,
                 kernel_size,
-                torch.IntTensor(cur_stride).to(features.device).unsqueeze(0))
-            hash_query = sphash(new_coords, kOffset)
-            hash_target = sphash(coords)
-            idx_query = sphashquery(hash_query, hash_target)
-            idx_query = list(squeeze_nmap(idx_query))
+                cur_stride)
+            hash_query = spF.sphash(new_coords, kOffset)
+            hash_target = spF.sphash(coords)
+            idx_query = spF.sphashquery(hash_query, hash_target)
+            idx_query = list(spF.squeeze_nmap(idx_query))
             idx_query[1] = idx_query[1].to('cpu')
             sizes = (features.shape[0], new_coords.shape[0])
             output_features = sparseconv_op(features, kernel, idx_query[0],
@@ -163,7 +150,7 @@ def conv3d(inputs: SparseTensor,
             output_tensor.coord_maps = copy.deepcopy(inputs.coord_maps)
             output_tensor.check()
 
-            kernel_map_key = KernelMapConfig(kernel_size, cur_stride, stride,
+            kernel_map_key = KernelMapKey(kernel_size, cur_stride, stride,
                                              dilation)
             output_tensor.kernel_maps = copy.deepcopy(inputs.kernel_maps)
             output_tensor.kernel_maps[kernel_map_key] = idx_query + [sizes]
@@ -176,10 +163,10 @@ def conv3d(inputs: SparseTensor,
                     kOffset = kRegion.get_kernel_offset().to(features.device)
                 except:
                     raise
-                hash_query = sphash(coords, kOffset)
-                hash_target = sphash(coords)
-                idx_query = sphashquery(hash_query, hash_target)
-                idx_query = list(squeeze_nmap(idx_query))
+                hash_query = spF.sphash(coords, kOffset)
+                hash_target = spF.sphash(coords)
+                idx_query = spF.sphashquery(hash_query, hash_target)
+                idx_query = list(spF.squeeze_nmap(idx_query))
                 idx_query[1] = idx_query[1].to('cpu')
                 sizes = (features.shape[0], features.shape[0])
                 output_features = sparseconv_op(features, kernel, idx_query[0],
@@ -191,7 +178,7 @@ def conv3d(inputs: SparseTensor,
                 output_tensor.coord_maps = inputs.coord_maps
                 output_tensor.check()
                 output_tensor.kernel_maps = copy.deepcopy(inputs.kernel_maps)
-                kernel_map_key = KernelMapConfig(kernel_size, cur_stride,
+                kernel_map_key = KernelMapKey(kernel_size, cur_stride,
                                                  stride, dilation)
                 output_tensor.kernel_maps[kernel_map_key] = idx_query + [sizes]
             else:
@@ -212,7 +199,7 @@ def conv3d(inputs: SparseTensor,
         original_stride = tuple(
             [int(a / b) for a, b in zip(cur_stride, stride)])
 
-        kernel_map_key = KernelMapConfig(kernel_size, original_stride, stride,
+        kernel_map_key = KernelMapKey(kernel_size, original_stride, stride,
                                          dilation)
         kernel_map = inputs.kernel_maps.get(kernel_map_key, None)
         assert kernel_map is not None, f'{kernel_map_key} does not exist.'

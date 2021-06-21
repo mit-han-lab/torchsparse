@@ -1,18 +1,17 @@
-from collections import namedtuple
+import numpy as np
 import torch
 from typing import Union, List, Tuple
 
-__all__ = ['SparseTensor', 'KernelMapConfig']
+__all__ = ['SparseTensor']
 
-KernelMapConfig = namedtuple(
-    'KernelMapConfig', ['kernel_size', 'cur_stride', 'stride', 'dilation'])
+
 
 
 class SparseTensor:
     def __init__(self,
-                 feats,
-                 coords,
-                 stride: Union[int, List[int], Tuple[int, int, int]] = 1):
+                 feats: Union[np.ndarray, torch.Tensor],
+                 coords: Union[np.ndarray, torch.Tensor],
+                 stride: Union[int, List[int], Tuple[int, int, int]] = 1) -> None:
         self.F = feats
         self.C = coords
         if isinstance(stride, int):
@@ -54,3 +53,5 @@ class SparseTensor:
         tensor.coord_maps = self.coord_maps
         tensor.kernel_maps = self.kernel_maps
         return tensor
+
+

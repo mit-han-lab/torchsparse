@@ -2,9 +2,9 @@ import math
 
 import torch
 from torch import nn
-from torchsparse.sparse_tensor import *
-
-from ..functional import *
+from torchsparse.sparse_tensor import SparseTensor
+from torchsparse.nn import functional as spF
+from torchsparse.utils.helpers import make_tuple
 
 from typing import Union, List, Tuple
 
@@ -79,7 +79,7 @@ class Conv3d(nn.Module):
             self.bias.data.uniform_(-std, std)
 
     def forward(self, inputs: SparseTensor) -> SparseTensor:
-        return conv3d(inputs,
+        return spF.conv3d(inputs,
                       self.kernel,
                       kernel_size=self.kernel_size,
                       bias=self.bias,
@@ -129,7 +129,7 @@ class ToDenseBEVConvolution(nn.Module):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 shape,
+                 shape: Union[List[int], Tuple[int, int, int], torch.Tensor],
                  offset: List[int] = [0, 0, 0],
                  dim: int = 1,
                  bias: bool = False) -> None:
@@ -137,10 +137,14 @@ class ToDenseBEVConvolution(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.register_buffer('offset', torch.IntTensor([list(offset) + [0]]))
+        if isinstance(shape, torch.Tensor):
+            self.register_buffer('shape', shape.int())
+        else:
+            self.register_buffer('shape', torch.IntTensor(shape))
         self.dim = dim
-        self.n_kernels = int(shape[self.dim])
+        self.n_kernels = int(self.shape[self.dim])
         self.bev_dims = [i for i in range(3) if i != self.dim]
-        self.bev_shape = shape[self.bev_dims]
+        self.bev_shape = self.shape[self.bev_dims]
         self.kernel = nn.Parameter(
             torch.zeros(self.n_kernels, in_channels, out_channels))
         self.bias = nn.Parameter(torch.zeros(1, out_channels)) if bias else 0
@@ -154,7 +158,7 @@ class ToDenseBEVConvolution(nn.Module):
         std = 1. / math.sqrt(self.in_channels)
         self.kernel.data.uniform_(-std, std)
 
-    def forward(self, inputs: SparseTensor) -> SparseTensor:
+    def forward(self, inputs: SparseTensor) -> torch.Tensor:
         coords, feats, stride = inputs.C, inputs.F, inputs.s
         if isinstance(stride, tuple):
             stride = torch.Tensor(stride).unsqueeze(0).to(feats)[:, self.dim]
@@ -211,7 +215,7 @@ class ToBEVConvolution(nn.Module):
         return 'in_channels={}, out_channels={}, n_kernels={}, stride={}'.format(
             self.in_channels, self.out_channels, self.n_kernels, self.stride)
 
-    def forward(self, inputs: SparseTensor) -> SparseTensor:
+    def forward(self, inputs: SparseTensor) -> torch.Tensor:
         coords, feats, stride = inputs.C, inputs.F, inputs.s
         ratio = stride * self.stride
         if isinstance(stride, tuple):
@@ -248,22 +252,25 @@ class ToBEVHeightCompression(nn.Module):
     """
     def __init__(self,
                  channels: int,
-                 shape,
+                 shape: Union[List[int], Tuple[int, int, int], torch.Tensor],
                  offset: List[int] = [0, 0, 0],
                  dim: int = 1,
                  bias: bool = False) -> None:
         super().__init__()
         self.channels = channels
         self.register_buffer('offset', torch.IntTensor([list(offset) + [0]]))
+        if isinstance(shape, torch.Tensor):
+            self.register_buffer('shape', shape.int())
+        else:
+            self.register_buffer('shape', torch.IntTensor(shape))
         self.dim = dim
         self.bev_dims = [i for i in range(3) if i != self.dim]
-        self.bev_shape = shape[self.bev_dims].int()
-        self.shape = shape.int()
+        self.bev_shape = self.shape[self.bev_dims]
 
     def extra_repr(self):
         return 'channels={}'.format(self.channels)
 
-    def forward(self, inputs: SparseTensor) -> SparseTensor:
+    def forward(self, inputs: SparseTensor) -> torch.Tensor:
         coords, feats, stride = inputs.C, inputs.F, inputs.s
         if isinstance(stride, tuple):
             stride = torch.Tensor(stride).unsqueeze(0).to(feats)
