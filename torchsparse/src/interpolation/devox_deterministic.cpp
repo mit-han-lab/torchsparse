@@ -9,8 +9,6 @@ at::Tensor deterministic_devoxelize_forward(
     const at::Tensor indices,
     const at::Tensor weight)
 {
-  //int b = feat.size(0);
-  //printf("%d\n", b);
   int c = feat.size(1);
   int N = indices.size(0);
 
@@ -32,7 +30,6 @@ at::Tensor deterministic_devoxelize_backward(
   deterministic_devoxelize_grad_wrapper(N, n, c, indices.data_ptr<int>(), weight.data_ptr<float>(), top_grad.data_ptr<float>(), bottom_grad_int.data_ptr<int>());
 
   at::Tensor bottom_grad = bottom_grad_int.to(at::ScalarType::Double);
-  //std::cout << torch::mean(bottom_grad) << std::endl;
   bottom_grad /= 1e10;
   return bottom_grad.to(at::ScalarType::Float);
 }

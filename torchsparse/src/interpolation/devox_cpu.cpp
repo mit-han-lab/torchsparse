@@ -9,8 +9,6 @@ at::Tensor cpu_devoxelize_forward(
     const at::Tensor indices,
     const at::Tensor weight)
 {
-  //int b = feat.size(0);
-  //printf("%d\n", b);
   int c = feat.size(1);
   int N = indices.size(0);
 

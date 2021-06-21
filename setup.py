@@ -28,9 +28,6 @@ file_lis = [
     'torchsparse/src/interpolation/devox_deterministic.cpp',
     'torchsparse/src/interpolation/devox_deterministic_gpu.cu',
     'torchsparse/src/interpolation/devox_cpu.cpp',
-    'torchsparse/src/others/convert_neighbor_map.cpp',
-    'torchsparse/src/others/convert_neighbor_map_gpu.cu',
-    'torchsparse/src/others/convert_neighbor_map_cpu.cpp',
     'torchsparse/src/others/count.cpp',
     'torchsparse/src/others/count_gpu.cu',
     'torchsparse/src/others/count_cpu.cpp',
@@ -44,7 +41,6 @@ file_lis = [
     'torchsparse/src/hash/hash_cpu.cpp',
     'torchsparse/src/hashmap/hashmap_cpu.cpp',
     'torchsparse/src/interpolation/devox_cpu.cpp',
-    'torchsparse/src/others/convert_neighbor_map_cpu.cpp',
     'torchsparse/src/others/insertion_cpu.cpp',
     'torchsparse/src/others/query_cpu.cpp',
     'torchsparse/src/others/count_cpu.cpp'

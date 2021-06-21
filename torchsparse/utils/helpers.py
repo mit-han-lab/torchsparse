@@ -4,6 +4,11 @@ import numpy as np
 import torch
 from torchsparse import SparseTensor
 
+__all__ = [
+    'ravel_hash_vec', 'sparse_quantize', 'sparse_collate', 'sparse_collate_fn',
+    'sparse_collate_tensors', 'make_tuple'
+]
+
 
 def ravel_hash_vec(arr):
     assert arr.ndim == 2
@@ -151,12 +156,16 @@ def sparse_collate(coords,
 
         if not coord_float:
             coords_batch.append(
-                torch.cat((coord, torch.ones((num_points, 1), device=coord.device).int() * batch_id),
-                          1))
+                torch.cat(
+                    (coord, torch.ones(
+                        (num_points, 1), device=coord.device).int() *
+                     batch_id), 1))
         else:
             coords_batch.append(
                 torch.cat(
-                    (coord, torch.ones((num_points, 1), device=coord.device).float() * batch_id), 1))
+                    (coord, torch.ones(
+                        (num_points, 1), device=coord.device).float() *
+                     batch_id), 1))
 
         # Features
         feats_batch.append(feat)
@@ -233,3 +242,17 @@ def sparse_collate_fn(batch):
             else:
                 ans_dict += [sample[i] for sample in batch],
         return ans_dict
+
+
+def make_tuple(inputs, dimension=3):
+    if isinstance(inputs, int):
+        outputs = tuple()
+        for d in range(dimension):
+            outputs += inputs,
+        return outputs
+    elif isinstance(inputs, list):
+        assert len(inputs) == dimension, 'Input length and dimension mismatch'
+        return tuple(inputs)
+    elif isinstance(inputs, tuple):
+        assert len(inputs) == dimension, 'Input length and dimension mismatch'
+        return inputs

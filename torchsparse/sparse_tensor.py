@@ -1,13 +1,24 @@
+import numpy as np
 import torch
+from typing import Union, List, Tuple
 
 __all__ = ['SparseTensor']
 
 
 class SparseTensor:
-    def __init__(self, feats, coords, stride=1):
+    def __init__(
+            self,
+            feats: Union[np.ndarray, torch.Tensor],
+            coords: Union[np.ndarray, torch.Tensor],
+            stride: Union[int, List[int], Tuple[int, int, int]] = 1) -> None:
         self.F = feats
         self.C = coords
-        self.s = stride
+        if isinstance(stride, int):
+            self.s = (stride, stride, stride)
+        elif isinstance(stride, list):
+            self.s = tuple(stride)
+        else:
+            self.s = stride
         self.coord_maps = {}
         self.kernel_maps = {}
 
