@@ -100,7 +100,7 @@ def conv3d(inputs: SparseTensor,
            bias: Optional[torch.Tensor] = None,
            stride: Union[int, List[int], Tuple[int, int, int]] = 1,
            dilation: Union[int, List[int], Tuple[int, int, int]] = 1,
-           transpose: bool = False):
+           transpose: bool = False) -> SparseTensor:
     features = inputs.F
     coords = inputs.C
     cur_stride = inputs.s
@@ -219,5 +219,3 @@ def conv3d(inputs: SparseTensor,
         output_tensor.kernel_maps = inputs.kernel_maps
 
     return output_tensor
-
-
