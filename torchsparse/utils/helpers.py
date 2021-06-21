@@ -4,9 +4,10 @@ import numpy as np
 import torch
 from torchsparse import SparseTensor
 
-
-__all__ = ['ravel_hash_vec', 'sparse_quantize', 'sparse_collate', 
-           'sparse_collate_fn', 'sparse_collate_tensors', 'make_tuple']
+__all__ = [
+    'ravel_hash_vec', 'sparse_quantize', 'sparse_collate', 'sparse_collate_fn',
+    'sparse_collate_tensors', 'make_tuple'
+]
 
 
 def ravel_hash_vec(arr):
@@ -241,7 +242,7 @@ def sparse_collate_fn(batch):
             else:
                 ans_dict += [sample[i] for sample in batch],
         return ans_dict
-    
+
 
 def make_tuple(inputs, dimension=3):
     if isinstance(inputs, int):

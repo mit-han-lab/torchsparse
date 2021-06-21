@@ -6,8 +6,9 @@ from torchsparse.utils import make_tuple
 
 __all__ = ['KernelRegion', 'KernelMapKey']
 
-KernelMapKey = namedtuple(
-    'KernelMapKey', ['kernel_size', 'cur_stride', 'stride', 'dilation'])
+KernelMapKey = namedtuple('KernelMapKey',
+                          ['kernel_size', 'cur_stride', 'stride', 'dilation'])
+
 
 class KernelRegion:
     def __init__(self,
@@ -79,5 +80,3 @@ class KernelRegion:
 
     def get_kernel_offset(self):
         return self.kernel_offset
-
-

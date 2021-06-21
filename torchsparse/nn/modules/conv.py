@@ -80,12 +80,12 @@ class Conv3d(nn.Module):
 
     def forward(self, inputs: SparseTensor) -> SparseTensor:
         return spF.conv3d(inputs,
-                      self.kernel,
-                      kernel_size=self.kernel_size,
-                      bias=self.bias,
-                      stride=self.stride,
-                      dilation=self.dilation,
-                      transpose=self.t)
+                          self.kernel,
+                          kernel_size=self.kernel_size,
+                          bias=self.bias,
+                          stride=self.stride,
+                          dilation=self.dilation,
+                          transpose=self.t)
 
 
 class ToBEVReduction(nn.Module):

@@ -5,13 +5,12 @@ from typing import Union, List, Tuple
 __all__ = ['SparseTensor']
 
 
-
-
 class SparseTensor:
-    def __init__(self,
-                 feats: Union[np.ndarray, torch.Tensor],
-                 coords: Union[np.ndarray, torch.Tensor],
-                 stride: Union[int, List[int], Tuple[int, int, int]] = 1) -> None:
+    def __init__(
+            self,
+            feats: Union[np.ndarray, torch.Tensor],
+            coords: Union[np.ndarray, torch.Tensor],
+            stride: Union[int, List[int], Tuple[int, int, int]] = 1) -> None:
         self.F = feats
         self.C = coords
         if isinstance(stride, int):
@@ -53,5 +52,3 @@ class SparseTensor:
         tensor.coord_maps = self.coord_maps
         tensor.kernel_maps = self.kernel_maps
         return tensor
-
-

@@ -8,16 +8,19 @@ from typing import Tuple, List, Union
 __all__ = ['spdownsample']
 
 
-def spdownsample(coords: torch.Tensor,
-                 ratio: Union[int, List[int], Tuple[int, int, int]] = 2,
-                 kernel_size: Union[int, List[int], Tuple[int, int, int]] = 2,
-                 tensor_stride: Union[int, List[int], Tuple[int, int, int]] = 1) -> torch.Tensor:
-    
+def spdownsample(
+    coords: torch.Tensor,
+    ratio: Union[int, List[int], Tuple[int, int, int]] = 2,
+    kernel_size: Union[int, List[int], Tuple[int, int, int]] = 2,
+    tensor_stride: Union[int, List[int], Tuple[int, int, int]] = 1
+) -> torch.Tensor:
+
     if not isinstance(ratio, int):
         ratio = torch.IntTensor(ratio).to(coords.device).unsqueeze(0)
     if not isinstance(tensor_stride, int):
-        tensor_stride = torch.IntTensor(tensor_stride).to(coords.device).unsqueeze(0)
-    
+        tensor_stride = torch.IntTensor(tensor_stride).to(
+            coords.device).unsqueeze(0)
+
     if isinstance(kernel_size, int) and isinstance(ratio, int):
         direct_downsample = kernel_size == ratio
     else:
