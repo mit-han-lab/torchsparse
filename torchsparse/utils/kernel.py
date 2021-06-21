@@ -2,6 +2,7 @@ from collections import namedtuple
 import numpy as np
 import torch
 from typing import Union, List, Tuple
+from torchsparse.utils import make_tuple
 
 __all__ = ['KernelRegion', 'KernelMapKey']
 
@@ -16,15 +17,8 @@ class KernelRegion:
                  dilation: Union[int, List[int], Tuple[int, int, int]] = 1,
                  dim: List[int] = [0, 1, 2]) -> None:
         self.kernel_size = kernel_size
-        if isinstance(tensor_stride, int):
-            self.tensor_stride = [tensor_stride] * 3
-        elif isinstance(tensor_stride, torch.Tensor):
-            self.tensor_stride = tensor_stride.cpu().view(-1).numpy().tolist()
-        else:
-            self.tensor_stride = tensor_stride
-        if isinstance(dilation, int):
-            dilation = [dilation] * 3
-        self.dilation = dilation
+        self.tensor_stride = make_tuple(tensor_stride)
+        self.dilation = make_tuple(dilation)
         assert len(self.tensor_stride) == 3, 'Wrong tensor_stride'
         assert len(self.dilation) == 3, 'Wrong dilation'
 
@@ -85,3 +79,5 @@ class KernelRegion:
 
     def get_kernel_offset(self):
         return self.kernel_offset
+
+

@@ -3,7 +3,7 @@ import torch
 __all__ = ['squeeze_nmap']
 
 
-def squeeze_nmap(neighbor_map):
+def squeeze_nmap(neighbor_map: torch.Tensor) -> torch.Tensor:
     idx_batch, idx_point = torch.where(neighbor_map != -1)
     map_converted = neighbor_map.view(-1)[idx_batch * neighbor_map.size(1) +
                                           idx_point]
