@@ -36,7 +36,7 @@ at::Tensor cpu_insertion_backward(
   //return group_point_forward_gpu(points, indices);
 
   int c = top_grad.size(1);
-  int N1 = counts.size(0);
+  //int N1 = counts.size(0);
   at::Tensor bottom_grad = torch::zeros({N, c}, at::device(idx.device()).dtype(at::ScalarType::Float));
   for (int i = 0; i < N; i++)
   {
