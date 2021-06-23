@@ -62,14 +62,14 @@ def bench_workload(workload):
     return workload(num_repeats) / num_repeats
 
 
-def bench_matmul_tvm(i, k, o, mod, ctx):
+def bench_matmul_tvm(i, k, o, mod, ctx, num_repeats=1000):
     def workload(nrepeats):
         timer = mod.time_evaluator(mod.entry_name, ctx=ctx, number=nrepeats)
         return timer(a, b, c).mean * nrepeats
     a, b, c = [tvm.nd.array(x, ctx=ctx) for x in [i, k, o]]
     # time = bench_workload(workload)
     workload(1)  # warmup
-    time = workload(1)  # the time to run once
+    time = workload(num_repeats)  # the time to run once
     return time
 
  
