@@ -22,22 +22,19 @@ class ToBEVReduction(nn.Module):
         return f'dim = {self.dim}'
 
     def forward(self, input: SparseTensor) -> SparseTensor:
-        coords, feats, stride = input.C, input.F, input.s
+        coords, feats, stride = input.coords, input.feats, input.stride
 
         coords = coords.clone()
         coords[:, self.dim] = 0
         feats = torch.cat([torch.ones_like(feats[:, :1]), feats], axis=1)
-        tensor = torch.cuda.sparse.FloatTensor(coords.t().long(),
-                                               feats).coalesce()
+        tensor = torch.sparse_coo_tensor(coords.t().long(), feats).to_dense()
         coords = tensor.indices().t().int()
         feats = tensor.values()[:, 1:] / tensor.values()[:, :1]
         return SparseTensor(coords=coords, feats=feats, stride=stride)
 
 
 class ToDenseBEVConvolution(nn.Module):
-    """
-
-    Converts a torchsparse.SparseTensor to a BEV feature map.
+    """ Converts a torchsparse.SparseTensor to a BEV feature map.
     Group points with the same z value together and apply the same FC kernel.
     Aggregate the results by summing up all features within one BEV grid.
 
@@ -48,8 +45,6 @@ class ToDenseBEVConvolution(nn.Module):
     bias: whether to use bias.
 
     Warning: usually larger memory consumption than ToBEVHeightCompression.
-
-
     """
 
     def __init__(self,
@@ -85,9 +80,8 @@ class ToDenseBEVConvolution(nn.Module):
         self.kernel.data.uniform_(-std, std)
 
     def forward(self, input: SparseTensor) -> torch.Tensor:
-        coords, feats, stride = input.C, input.F, input.s
-        if isinstance(stride, tuple):
-            stride = torch.Tensor(stride).unsqueeze(0).to(feats)[:, self.dim]
+        coords, feats, stride = input.coords, input.feats, input.stride
+        stride = torch.tensor(stride).unsqueeze(0).to(feats)[:, self.dim]
 
         kernel = torch.index_select(self.kernel, 0,
                                     (coords[:, self.dim] // stride).long())
@@ -140,10 +134,9 @@ class ToBEVConvolution(nn.Module):
             self.in_channels, self.out_channels, self.n_kernels, self.stride)
 
     def forward(self, input: SparseTensor) -> torch.Tensor:
-        coords, feats, stride = input.C, input.F, input.s
+        coords, feats, stride = input.coords, input.feats, input.stride
         ratio = stride * self.stride
-        if isinstance(stride, tuple):
-            stride = torch.Tensor(stride).unsqueeze(0).to(feats)[:, self.dim]
+        stride = torch.tensor(stride).unsqueeze(0).to(feats)[:, self.dim]
 
         kernels = torch.index_select(self.kernel, 0,
                                      coords[:, self.dim].long() // stride)
@@ -153,15 +146,13 @@ class ToBEVConvolution(nn.Module):
         if self.stride > 1:
             coords[:3] /= ratio
             coords[:3] *= ratio
-        flatten = torch.cuda.sparse.FloatTensor(coords, feats).coalesce()
+        flatten = torch.sparse_coo_tensor(coords, feats).to_dense()
         return SparseTensor(flatten.values(),
                             flatten.indices().t().int(), ratio)
 
 
 class ToBEVHeightCompression(nn.Module):
-    """
-
-    Converts a torchsparse.SparseTensor to a dense volumetric tensor,
+    """ Converts a torchsparse.SparseTensor to a dense volumetric tensor,
     then flatten the z dimension.
     E.g. input [N, C] (assume batch_size=1), spatial size [128,2,128]
     then output will be [1, 2C, 128, 128]
@@ -171,16 +162,13 @@ class ToBEVHeightCompression(nn.Module):
     shape: shape of BEV map.
     dim: dimension index for z. (default: 1 for KITTI coords)
     bias: whether to use bias.
-
-
     """
 
     def __init__(self,
                  channels: int,
                  shape: Union[List[int], Tuple[int, int, int], torch.Tensor],
                  offset: Tuple[int, int, int] = (0, 0, 0),
-                 dim: int = 1,
-                 bias: bool = False) -> None:
+                 dim: int = 1) -> None:
         super().__init__()
         self.channels = channels
         self.register_buffer('offset', torch.IntTensor([list(offset) + [0]]))
@@ -196,10 +184,9 @@ class ToBEVHeightCompression(nn.Module):
         return f'channels={self.channels}'
 
     def forward(self, input: SparseTensor) -> torch.Tensor:
-        coords, feats, stride = input.C, input.F, input.s
-        if isinstance(stride, tuple):
-            stride = torch.Tensor(stride).unsqueeze(0).to(feats)
-        assert isinstance(stride, torch.Tensor)
+        coords, feats, stride = input.coords, input.feats, input.stride
+        stride = torch.tensor(stride).unsqueeze(0).to(coords.device)
+        assert isinstance(stride, torch.Tensor), type(stride)
 
         # [b, x, y, z]
         coords = (coords - self.offset).t()[[3] + self.bev_dims
