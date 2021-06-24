@@ -1,70 +1,49 @@
+from typing import Tuple, Union
+
 import torch
-import torchsparse_backend
-from torch.autograd import Function
-from torchsparse.nn.functional.hash import *
-from torchsparse.utils.kernel import KernelRegion
-from typing import Tuple, List, Union
+
+from torchsparse.nn.utils import get_kernel_offsets
+from torchsparse.utils import make_ntuple
 
 __all__ = ['spdownsample']
 
 
 def spdownsample(
-    coords: torch.Tensor,
-    ratio: Union[int, List[int], Tuple[int, int, int]] = 2,
-    kernel_size: Union[int, List[int], Tuple[int, int, int]] = 2,
-    tensor_stride: Union[int, List[int], Tuple[int, int, int]] = 1
-) -> torch.Tensor:
+        coords: torch.Tensor,
+        stride: Union[int, Tuple[int, ...]] = 2,
+        kernel_size: Union[int, Tuple[int, ...]] = 2,
+        tensor_stride: Union[int, Tuple[int, ...]] = 1) -> torch.Tensor:
+    stride = make_ntuple(stride, ndim=3)
+    kernel_size = make_ntuple(kernel_size, ndim=3)
+    tensor_stride = make_ntuple(tensor_stride, ndim=3)
 
-    if not isinstance(ratio, int):
-        ratio = torch.IntTensor(ratio).to(coords.device).unsqueeze(0)
-    if not isinstance(tensor_stride, int):
-        tensor_stride = torch.IntTensor(tensor_stride).to(
-            coords.device).unsqueeze(0)
+    sample_stride = [stride[k] * tensor_stride[k] for k in range(3)]
+    sample_stride = torch.tensor(sample_stride,
+                                 dtype=torch.int,
+                                 device=coords.device).unsqueeze(0)
 
-    if isinstance(kernel_size, int) and isinstance(ratio, int):
-        direct_downsample = kernel_size == ratio
+    if all(stride[k] in [1, kernel_size[k]] for k in range(3)):
+        coords = coords.clone()
+        coords[:, :3] = coords[:, :3] // sample_stride * sample_stride
     else:
-        if isinstance(kernel_size, int):
-            # ratio is a permutation of [1, 1, kernel_size]
-            direct_downsample = (kernel_size == ratio.prod().item()) & \
-                (torch.sum(ratio == kernel_size) == 1).item()
-        else:
-            direct_downsample = False
+        offsets = get_kernel_offsets(kernel_size,
+                                     tensor_stride,
+                                     device=coords.device)
 
-    if direct_downsample:
-        _ratio = ratio * tensor_stride
-        new_coords = torch.cat(
-            [coords[:, :3] // _ratio * _ratio, coords[:, 3:]], 1)
-        return torch.unique(new_coords, dim=0)
-    else:
-        kernel_region = KernelRegion(kernel_size, tensor_stride, dilation=1)
-        # kernel volume x 3
-        kernel_offset = kernel_region.get_kernel_offset().to(coords.device)
-        new_coords = coords[:, :3].unsqueeze(1).repeat(
-            1, kernel_offset.size(0), 1) + kernel_offset
-        # (N x kernel volume) x 4
-        new_coords = torch.cat([
-            coords[:, 3:].repeat(1, kernel_offset.size(0)).view(-1, 1),
-            new_coords.view(-1, 3)
-        ],
-                               dim=1)
-        new_ts = tensor_stride * ratio
-        # only keep these coordinates that is multiple of new_ts.
-        if isinstance(new_ts, torch.Tensor):
-            new_ts = new_ts[0]
-            new_coords = new_coords[
-                (new_coords[:, 1] % new_ts[0].item() == 0) & (new_coords[:, 2] % new_ts[1].item() == 0) & \
-                (new_coords[:, 3] % new_ts[2].item() == 0)
-            ]
-        else:
-            new_coords = new_coords[
-                (new_coords[:, 1] % new_ts == 0) & (new_coords[:, 2] % new_ts == 0) & \
-                (new_coords[:, 3] % new_ts == 0)
-            ]
-        new_coords = new_coords[(new_coords[:, 1] >= 0)
-                                & (new_coords[:, 2] >= 0) &
-                                (new_coords[:, 3] >= 0)]
-        # filter out duplicates
-        new_coords = torch.unique(new_coords, dim=0)
-        new_coords = new_coords[:, [1, 2, 3, 0]]
-        return new_coords
+        coords_min = torch.min(coords[:, :3], dim=0, keepdim=True).values
+
+        xyz = coords[:, :3].unsqueeze(1).repeat(1, offsets.size(0), 1) + offsets
+        b = coords[:, 3:].repeat(1, offsets.size(0))
+        coords = torch.cat([xyz.view(-1, 3), b.view(-1, 1)], dim=1)
+
+        # TODO(Zhijian): We need to also filter `coords` based on `coords_max`.
+        mask = (coords[:, :3] % sample_stride == 0)
+        mask &= (coords[:, :3] >= coords_min)
+        coords = coords[torch.sum(mask, dim=1) == 3, :]
+
+    # This makes sure that the points will be ordered with respect to the batch
+    # index, but this will not affect the correctness of the result.
+    coords = coords[:, [3, 0, 1, 2]]
+    coords = torch.unique(coords, dim=0)
+    coords = coords[:, [1, 2, 3, 0]]
+    return coords

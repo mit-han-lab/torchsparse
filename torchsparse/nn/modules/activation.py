@@ -1,47 +1,18 @@
-import functools
-
 from torch import nn
-from torchsparse.sparse_tensor import SparseTensor
 
-from torchsparse.nn import functional as spF
+from torchsparse import SparseTensor
+from torchsparse.nn.utils import fapply
 
 __all__ = ['ReLU', 'LeakyReLU']
 
 
-class Activation(nn.Module):
-    def __init__(self, inplace: bool = True) -> None:
-        super().__init__()
-        self.activation = spF.spact
-        self.inplace = inplace
+class ReLU(nn.ReLU):
 
-    def forward(self, inputs):
-        return self.activation(inputs)
+    def forward(self, input: SparseTensor) -> SparseTensor:
+        return fapply(input, super().forward)
 
 
-class ReLU(Activation):
-    def __init__(self, inplace: bool = True) -> None:
-        super().__init__()
-        self.activation = functools.partial(spF.sprelu, inplace=inplace)
+class LeakyReLU(nn.LeakyReLU):
 
-    def __repr__(self):
-        if self.inplace:
-            return 'ReLU(inplace=True)'
-        else:
-            return 'ReLU(inplace=False)'
-
-
-class LeakyReLU(Activation):
-    def __init__(self,
-                 negative_slope: float = 0.1,
-                 inplace: bool = True) -> None:
-        super().__init__()
-        self.activation = functools.partial(spF.spleaky_relu,
-                                            negative_slope=negative_slope,
-                                            inplace=inplace)
-        self.negative_slope = negative_slope
-
-    def __repr__(self):
-        if self.inplace:
-            return 'LeakyReLU(negative_slope=%f, inplace=True)' % self.negative_slope
-        else:
-            return 'LeakyReLU(negative_slope=%f, inplace=False)' % self.negative_slope
+    def forward(self, input: SparseTensor) -> SparseTensor:
+        return fapply(input, super().forward)

@@ -1,9 +1,11 @@
 import torch
 
+from torchsparse import SparseTensor
+
 __all__ = ['global_avg_pool', 'global_max_pool']
 
 
-def global_avg_pool(inputs):
+def global_avg_pool(inputs: SparseTensor) -> torch.Tensor:
     batch_index = inputs.C[:, -1]
     max_index = torch.max(batch_index).item()
     outputs = []
@@ -16,7 +18,7 @@ def global_avg_pool(inputs):
     return outputs
 
 
-def global_max_pool(inputs):
+def global_max_pool(inputs: SparseTensor) -> torch.Tensor:
     batch_index = inputs.C[:, -1]
     max_index = torch.max(batch_index).item()
     outputs = []
