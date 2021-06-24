@@ -17,9 +17,8 @@ else:
 
 sources = [os.path.join('torchsparse', 'backend', f'pybind_{device}.cpp')]
 for fpath in glob.glob(os.path.join('torchsparse', 'backend', '**', '*')):
-    if fpath.endswith('_cpu.cpp') and device in ['cpu', 'cuda']:
-        sources.append(fpath)
-    elif fpath.endswith('_cuda.cu') and device == 'cuda':
+    if ((fpath.endswith('_cpu.cpp') and device in ['cpu', 'cuda'])
+            or (fpath.endswith('_cuda.cu') and device == 'cuda')):
         sources.append(fpath)
 
 extension_type = CUDAExtension if device == 'cuda' else CppExtension
