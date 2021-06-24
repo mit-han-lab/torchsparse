@@ -80,13 +80,13 @@ if __name__ == '__main__':
 
     for k, feed_dict in enumerate(dataflow):
         inputs = feed_dict['input'].cuda()
-        targets = feed_dict['label'].cuda()
+        labels = feed_dict['label'].cuda()
 
         with amp.autocast(enabled=args.amp_enabled):
             outputs = model(inputs)
-            loss = criterion(outputs.F, targets.F)
+            loss = criterion(outputs.feats, labels.feats)
 
-        print(f'[step {k + 1}] loss = {loss.item()}.')
+        print(f'[step {k + 1}] loss = {loss.item()}')
 
         optimizer.zero_grad()
         scaler.scale(loss).backward()
