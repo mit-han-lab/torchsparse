@@ -1,10 +1,28 @@
+from typing import Optional, Tuple
+
+import torch
+
 from torchsparse import SparseTensor
 
 __all__ = ['spcrop']
 
 
-def spcrop(inputs: SparseTensor, loc_min, loc_max) -> SparseTensor:
-    coords, feats, stride = inputs.C, inputs.F, inputs.s
-    mask = ((coords[:, :3] >= loc_min) & (coords[:, :3] < loc_max)).all(-1)
+def spcrop(input: SparseTensor,
+           coords_min: Optional[Tuple[int, ...]] = None,
+           coords_max: Optional[Tuple[int, ...]] = None) -> SparseTensor:
+    coords, feats, stride = input.coords, input.feats, input.stride
+
+    mask = torch.ones_like(coords)
+    if coords_min is not None:
+        coords_min = torch.tensor(coords_min, dtype=int,
+                                  device=coords.device).unsqueeze(dim=0)
+        mask &= (coords[:, :3] >= coords_min)
+    if coords_max is not None:
+        coords_max = torch.tensor(coords_max, dtype=int,
+                                  device=coords.device).unsqueeze(dim=0)
+        mask &= (coords[:, :3] <= coords_max)
+
+    mask = torch.all(mask, dim=1)
     coords, feats = coords[mask], feats[mask]
-    return SparseTensor(coords=coords, feats=feats, stride=stride)
+    output = SparseTensor(coords=coords, feats=feats, stride=stride)
+    return output
