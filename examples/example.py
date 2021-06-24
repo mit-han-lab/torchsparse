@@ -21,10 +21,10 @@ class RandomDataset:
         self.voxel_size = voxel_size
 
     def __getitem__(self, _: int) -> Dict[str, Any]:
-        lidar = np.random.uniform(-100, 100, size=(self.input_size, 4))
+        inputs = np.random.uniform(-100, 100, size=(self.input_size, 4))
         labels = np.random.choice(10, size=self.input_size)
 
-        coords, feats = lidar[:, :3], lidar
+        coords, feats = inputs[:, :3], inputs
         coords -= np.min(coords, axis=0, keepdims=True)
         coords, indices = sparse_quantize(coords,
                                           self.voxel_size,
