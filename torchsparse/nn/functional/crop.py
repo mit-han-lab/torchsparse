@@ -14,11 +14,13 @@ def spcrop(input: SparseTensor,
 
     mask = torch.ones_like(coords)
     if coords_min is not None:
-        coords_min = torch.tensor(coords_min, dtype=int,
+        coords_min = torch.tensor(coords_min,
+                                  dtype=torch.int,
                                   device=coords.device).unsqueeze(dim=0)
         mask &= (coords[:, :3] >= coords_min)
     if coords_max is not None:
-        coords_max = torch.tensor(coords_max, dtype=int,
+        coords_max = torch.tensor(coords_max,
+                                  dtype=torch.int,
                                   device=coords.device).unsqueeze(dim=0)
         mask &= (coords[:, :3] <= coords_max)
 

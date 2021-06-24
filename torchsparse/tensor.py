@@ -53,17 +53,18 @@ class SparseTensor:
         self.coords = self.coords.detach()
         return self
 
-    def to(self, device, non_blocking=True):
+    def to(self, device: str, non_blocking: bool = True):
         self.feats = self.feats.to(device, non_blocking=non_blocking)
         self.coords = self.coords.to(device, non_blocking=non_blocking)
         return self
 
     def __add__(self, other):
-        tensor = SparseTensor(self.feats + other.feats, self.coords,
-                              self.stride)
-        tensor.cmaps = self.cmaps
-        tensor.kmaps = self.kmaps
-        return tensor
+        output = SparseTensor(coords=self.coords,
+                              feats=self.feats + other.feats,
+                              stride=self.stride)
+        output.cmaps = self.cmaps
+        output.kmaps = self.kmaps
+        return output
 
 
 class PointTensor:

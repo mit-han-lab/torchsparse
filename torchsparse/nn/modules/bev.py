@@ -81,18 +81,18 @@ class ToDenseBEVConvolution(nn.Module):
 
     def forward(self, input: SparseTensor) -> torch.Tensor:
         coords, feats, stride = input.coords, input.feats, input.stride
-        stride = torch.tensor(stride).unsqueeze(0).to(feats)[:, self.dim]
+        stride = torch.tensor(stride).unsqueeze(dim=0).to(feats)[:, self.dim]
 
         kernel = torch.index_select(self.kernel, 0,
                                     (coords[:, self.dim] // stride).long())
-        feats = (feats.unsqueeze(-1) * kernel).sum(1) + self.bias
+        feats = (feats.unsqueeze(dim=-1) * kernel).sum(1) + self.bias
         coords = (coords - self.offset).t()[[3] + self.bev_dims].long()
         coords[1:] = (coords[1:] // stride).long()
         indices = coords[0] * int(self.bev_shape.prod()) + coords[1] * int(
             self.bev_shape[1]) + coords[2]
         batch_size = coords[0].max().item() + 1
         output = torch.sparse_coo_tensor(
-            indices.unsqueeze(0),
+            indices.unsqueeze(dim=0),
             feats,
             torch.Size(
                 [batch_size * int(self.bev_shape.prod()),
@@ -136,11 +136,11 @@ class ToBEVConvolution(nn.Module):
     def forward(self, input: SparseTensor) -> torch.Tensor:
         coords, feats, stride = input.coords, input.feats, input.stride
         ratio = stride * self.stride
-        stride = torch.tensor(stride).unsqueeze(0).to(feats)[:, self.dim]
+        stride = torch.tensor(stride).unsqueeze(dim=0).to(feats)[:, self.dim]
 
         kernels = torch.index_select(self.kernel, 0,
                                      coords[:, self.dim].long() // stride)
-        feats = (feats.unsqueeze(-1) * kernels).sum(1) + self.bias
+        feats = (feats.unsqueeze(dim=-1) * kernels).sum(1) + self.bias
         coords = coords.t().long()
         coords[self.dim, :] = 0
         if self.stride > 1:
@@ -185,7 +185,7 @@ class ToBEVHeightCompression(nn.Module):
 
     def forward(self, input: SparseTensor) -> torch.Tensor:
         coords, feats, stride = input.coords, input.feats, input.stride
-        stride = torch.tensor(stride).unsqueeze(0).to(coords.device)
+        stride = torch.tensor(stride).unsqueeze(dim=0).to(coords.device)
         assert isinstance(stride, torch.Tensor), type(stride)
 
         # [b, x, y, z]
@@ -202,7 +202,7 @@ class ToBEVHeightCompression(nn.Module):
             shape[1:].prod()) + coords[2] * int(shape[2]) + coords[3]
         batch_size = coords[0].max().item() + 1
         output = torch.sparse_coo_tensor(
-            indices.unsqueeze(0),
+            indices.unsqueeze(dim=0),
             feats,
             torch.Size([batch_size * int(self.shape.prod()),
                         feats.size(-1)]),

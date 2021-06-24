@@ -16,27 +16,26 @@ class BatchNorm(nn.BatchNorm1d):
 class GroupNorm(nn.GroupNorm):
 
     def forward(self, input: SparseTensor) -> SparseTensor:
-        feats = input.F
-        coords = input.C
-        stride = input.s
+        coords, feats, stride = input.coords, input.feats, input.stride
+
+        batch_size = torch.max(coords[:, -1]).item() + 1
+        num_channels = feats.shape[1]
+
         # PyTorch's GroupNorm function expects the input to be in (N, C, *)
         # format where N is batch size, and C is number of channels. "feats"
         # is not in that format. So, we extract the feats corresponding to
         # each sample, bring it to the format expected by PyTorch's GroupNorm
         # function, and invoke it.
-        batch_size = coords[-1][-1] + 1
-        num_channels = feats.shape[1]
-        new_feats = torch.zeros_like(feats)
-        for sample_idx in range(batch_size):
-            indices = coords[:, -1] == sample_idx
-            sample_feats = feats[indices]
-            sample_feats = torch.transpose(sample_feats, 0, 1)
-            sample_feats = sample_feats.reshape(1, num_channels, -1)
-            normalized_feats = super().forward(sample_feats)
-            normalized_feats = normalized_feats.reshape(num_channels, -1)
-            normalized_feats = torch.transpose(normalized_feats, 0, 1)
-            new_feats[indices] = normalized_feats
-        output = SparseTensor(coords=coords, feats=new_feats, stride=stride)
+        nfeats = torch.zeros_like(feats)
+        for k in range(batch_size):
+            indices = coords[:, -1] == k
+            bfeats = feats[indices]
+            bfeats = bfeats.transpose(0, 1).reshape(1, num_channels, -1)
+            bfeats = super().forward(bfeats)
+            bfeats = bfeats.reshape(num_channels, -1).transpose(0, 1)
+            nfeats[indices] = bfeats
+
+        output = SparseTensor(coords=coords, feats=nfeats, stride=stride)
         output.cmaps = input.cmaps
         output.kmaps = input.kmaps
         return output

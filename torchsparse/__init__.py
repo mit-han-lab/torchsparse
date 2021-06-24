@@ -1,3 +1,3 @@
 from .operators import *
-from .tensors import *
+from .tensor import *
 from .version import __version__

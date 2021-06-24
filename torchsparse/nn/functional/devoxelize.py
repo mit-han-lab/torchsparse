@@ -7,12 +7,11 @@ import torchsparse.backend
 __all__ = ['spdevoxelize', 'calc_ti_weights']
 
 
-def calc_ti_weights(coords, idx_query, scale: float = 1):
-    # TODO(Haotian): normalize the weights to a probability distribution.
+def calc_ti_weights(coords: torch.Tensor,
+                    idx_query: torch.Tensor,
+                    scale: float = 1) -> torch.Tensor:
     with torch.no_grad():
-        # don't want points to lie exactly on grid
         p = coords
-        # don't use np.floor then convert to torch. numerical errors.
         if scale != 1:
             pf = torch.floor(coords / scale) * scale
         else:
@@ -45,7 +44,7 @@ def calc_ti_weights(coords, idx_query, scale: float = 1):
         if scale != 1:
             w /= scale ** 3
         w[idx_query == -1] = 0
-        w /= w.sum(0) + 1e-8
+        w /= torch.sum(w, dim=0) + 1e-8
     return w
 
 

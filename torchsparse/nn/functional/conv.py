@@ -71,7 +71,7 @@ class ConvolutionFunction(Function):
         grad_input = torch.zeros_like(input)
         grad_weight = torch.zeros_like(weight)
 
-        if input.device.type == 'cuda':
+        if grad_output.device.type == 'cuda':
             torchsparse.backend.convolution_backward_cuda(
                 input, grad_input, grad_output.contiguous(), weight,
                 grad_weight, nbmaps, nbsizes.cpu(), transposed)

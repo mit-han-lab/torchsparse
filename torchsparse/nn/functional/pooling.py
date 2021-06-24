@@ -6,26 +6,22 @@ __all__ = ['global_avg_pool', 'global_max_pool']
 
 
 def global_avg_pool(inputs: SparseTensor) -> torch.Tensor:
-    batch_index = inputs.C[:, -1]
-    max_index = torch.max(batch_index).item()
+    batch_size = torch.max(inputs.coords[:, -1]).item() + 1
     outputs = []
-    for i in range(max_index + 1):
-        cur_inputs = torch.index_select(inputs.F, 0,
-                                        torch.where(batch_index == i)[0])
-        cur_outputs = cur_inputs.mean(0).unsqueeze(0)
-        outputs.append(cur_outputs)
-    outputs = torch.cat(outputs, 0)
+    for k in range(batch_size):
+        input = inputs.feats[inputs.coords[:, -1] == k]
+        output = torch.mean(input, dim=0)
+        outputs.append(output)
+    outputs = torch.stack(outputs, dim=0)
     return outputs
 
 
 def global_max_pool(inputs: SparseTensor) -> torch.Tensor:
-    batch_index = inputs.C[:, -1]
-    max_index = torch.max(batch_index).item()
+    batch_size = torch.max(inputs.coords[:, -1]).item() + 1
     outputs = []
-    for i in range(max_index + 1):
-        cur_inputs = torch.index_select(inputs.F, 0,
-                                        torch.where(batch_index == i)[0])
-        cur_outputs = cur_inputs.max(0)[0].unsqueeze(0)
-        outputs.append(cur_outputs)
-    outputs = torch.cat(outputs, 0)
+    for k in range(batch_size):
+        input = inputs.feats[inputs.coords[:, -1] == k]
+        output = torch.max(input, dim=0)[0]
+        outputs.append(output)
+    outputs = torch.stack(outputs, dim=0)
     return outputs

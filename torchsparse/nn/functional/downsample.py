@@ -20,7 +20,7 @@ def spdownsample(
     sample_stride = [stride[k] * tensor_stride[k] for k in range(3)]
     sample_stride = torch.tensor(sample_stride,
                                  dtype=torch.int,
-                                 device=coords.device).unsqueeze(0)
+                                 device=coords.device).unsqueeze(dim=0)
 
     if all(stride[k] in [1, kernel_size[k]] for k in range(3)):
         coords = coords.clone()
@@ -29,17 +29,19 @@ def spdownsample(
         offsets = get_kernel_offsets(kernel_size,
                                      tensor_stride,
                                      device=coords.device)
+        kernel_volume = offsets.size(0)
 
         coords_min = torch.min(coords[:, :3], dim=0, keepdim=True).values
 
-        xyz = coords[:, :3].unsqueeze(1).repeat(1, offsets.size(0), 1) + offsets
-        b = coords[:, 3:].repeat(1, offsets.size(0))
-        coords = torch.cat([xyz.view(-1, 3), b.view(-1, 1)], dim=1)
+        x = coords[:, :3].unsqueeze(dim=1).repeat(1, kernel_volume, 1) + offsets
+        b = coords[:, 3:].repeat(1, kernel_volume)
+        coords = torch.cat([x.view(-1, 3), b.view(-1, 1)], dim=1)
 
         # TODO(Zhijian): We need to also filter `coords` based on `coords_max`.
         mask = (coords[:, :3] % sample_stride == 0)
         mask &= (coords[:, :3] >= coords_min)
-        coords = coords[torch.sum(mask, dim=1) == 3, :]
+        mask = torch.all(mask, dim=1)
+        coords = coords[mask]
 
     # This makes sure that the points will be ordered with respect to the batch
     # index, but this will not affect the correctness of the result.
