@@ -24,7 +24,10 @@ def spcrop(input: SparseTensor,
         coords_max = torch.tensor(coords_max,
                                   dtype=torch.int,
                                   device=coords.device).unsqueeze(dim=0)
-        mask &= (coords[:, :3] <= coords_max)
+        # Using "<" instead of "<=" is for the backward compatability (in
+        # some existing detection codebase). We might need to reflect this
+        # in the document or change it back to "<=" in the future.
+        mask &= (coords[:, :3] < coords_max)
 
     mask = torch.all(mask, dim=1)
     coords, feats = coords[mask], feats[mask]
