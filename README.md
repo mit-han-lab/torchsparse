@@ -20,10 +20,10 @@ TorchSparse depends on the [Google Sparse Hash](https://github.com/sparsehash/sp
 
 * You can also compile the library locally (if you do not have the sudo permission) and add the library path to the environment variable `CPLUS_INCLUDE_PATH`.
 
-The latest released TorchSparse (v1.3.0) can then be installed by
+The latest released TorchSparse (v1.4.0) can then be installed by
 
 ```bash
-pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@v1.3.0
+pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@v1.4.0
 ```
 
 If you use TorchSparse in your code, please remember to specify the exact version as your dependencies.
