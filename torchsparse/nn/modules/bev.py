@@ -34,17 +34,20 @@ class ToBEVReduction(nn.Module):
 
 
 class ToDenseBEVConvolution(nn.Module):
-    """ Converts a torchsparse.SparseTensor to a BEV feature map.
+    """Converts a SparseTensor into a dense BEV feature map.
+
     Group points with the same z value together and apply the same FC kernel.
     Aggregate the results by summing up all features within one BEV grid.
 
-    in_channels: input channels
-    out_channels: output channels
-    shape: shape of BEV map.
-    dim: dimension index for z. (default: 1 for KITTI coords)
-    bias: whether to use bias.
+    Note:
+        This module consumes larger memory than `ToBEVHeightCompression`.
 
-    Warning: usually larger memory consumption than ToBEVHeightCompression.
+    Args:
+        in_channels: Number of input channels
+        out_channels: Number of output channels
+        shape: Shape of BEV map
+        dim: Dimension index for z (default: 1 for KITTI coords)
+        bias: Whether to use bias
     """
 
     def __init__(self,
@@ -104,8 +107,7 @@ class ToDenseBEVConvolution(nn.Module):
 
 
 class ToBEVConvolution(nn.Module):
-    """ Sparse version of ToDenseBEVConvolution.
-    """
+    """Converts a SparseTensor into a sparse BEV feature map."""
 
     def __init__(self,
                  in_channels: int,
@@ -152,16 +154,13 @@ class ToBEVConvolution(nn.Module):
 
 
 class ToBEVHeightCompression(nn.Module):
-    """ Converts a torchsparse.SparseTensor to a dense volumetric tensor,
-    then flatten the z dimension.
-    E.g. input [N, C] (assume batch_size=1), spatial size [128,2,128]
-    then output will be [1, 2C, 128, 128]
+    """Converts a SparseTensor to a flattened volumetric tensor.
 
-    channels: input channels
-    (Note: output channels = channels x #unique z values)
-    shape: shape of BEV map.
-    dim: dimension index for z. (default: 1 for KITTI coords)
-    bias: whether to use bias.
+    Args:
+        channels: Number of input channels
+        (Note: output channels = channels x #unique z values)
+        shape: Shape of BEV map
+        dim: Dimension index for z (default: 1 for KITTI coords)
     """
 
     def __init__(self,
