@@ -1,82 +1,94 @@
+import argparse
+import random
+from typing import Any, Dict
+
 import numpy as np
 import torch
-import torch.nn as nn
-import torchsparse
-import torchsparse.nn as spnn
+import torch.utils.data
+from torch import nn
+from torch.cuda import amp
+
 from torchsparse import SparseTensor
-from torchsparse.utils import sparse_collate_fn, sparse_quantize
-import argparse
+from torchsparse import nn as spnn
+from torchsparse.utils.collate import sparse_collate_fn
+from torchsparse.utils.quantize import sparse_quantize
 
 
-def generate_random_point_cloud(size=100000, voxel_size=0.2):
-    pc = np.random.randn(size, 4)
-    pc[:, :3] = pc[:, :3] * 10
-    rounded_pc = np.round(pc[:, :3] / voxel_size).astype(np.int32)
-    labels = np.random.choice(10, size)
-    inds, _, inverse_map = sparse_quantize(rounded_pc,
-                                           pc,
-                                           labels,
-                                           return_index=True,
-                                           return_invs=True)
+class RandomDataset:
 
-    voxel_pc = rounded_pc[inds]
-    voxel_feat = pc[inds]
-    voxel_labels = labels[inds]
+    def __init__(self, input_size: int, voxel_size: float) -> None:
+        self.input_size = input_size
+        self.voxel_size = voxel_size
 
-    sparse_tensor = SparseTensor(voxel_feat, voxel_pc)
-    label_tensor = SparseTensor(voxel_labels, voxel_pc)
+    def __getitem__(self, _: int) -> Dict[str, Any]:
+        inputs = np.random.uniform(-100, 100, size=(self.input_size, 4))
+        labels = np.random.choice(10, size=self.input_size)
 
-    feed_dict = {'lidar': sparse_tensor, 'targets': label_tensor}
+        coords, feats = inputs[:, :3], inputs
+        coords -= np.min(coords, axis=0, keepdims=True)
+        coords, indices = sparse_quantize(coords,
+                                          self.voxel_size,
+                                          return_index=True)
 
-    return feed_dict
+        coords = torch.tensor(coords, dtype=torch.int)
+        feats = torch.tensor(feats[indices], dtype=torch.float)
+        labels = torch.tensor(labels[indices], dtype=torch.long)
 
+        input = SparseTensor(coords=coords, feats=feats)
+        label = SparseTensor(coords=coords, feats=labels)
+        return {'input': input, 'label': label}
 
-def generate_batched_random_point_clouds(size=100000,
-                                         voxel_size=0.2,
-                                         batch_size=2):
-    batch = []
-    for i in range(batch_size):
-        batch.append(generate_random_point_cloud(size, voxel_size))
-    return sparse_collate_fn(batch)
-
-
-def dummy_train(device, mixed=False):
-    model = nn.Sequential(
-        spnn.Conv3d(4, 32, kernel_size=3, stride=1), spnn.BatchNorm(32),
-        spnn.ReLU(True), spnn.Conv3d(32, 64, kernel_size=2, stride=2),
-        spnn.BatchNorm(64), spnn.ReLU(True),
-        spnn.Conv3d(64, 64, kernel_size=2, stride=2, transpose=True),
-        spnn.BatchNorm(64), spnn.ReLU(True),
-        spnn.Conv3d(64, 32, kernel_size=3, stride=1), spnn.BatchNorm(32),
-        spnn.ReLU(True), spnn.Conv3d(32, 10, kernel_size=1)).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.CrossEntropyLoss().to(device)
-    scaler = torch.cuda.amp.GradScaler(enabled=mixed)
-
-    print('Starting dummy training...')
-    for i in range(10):
-        optimizer.zero_grad()
-        feed_dict = generate_batched_random_point_clouds()
-        inputs = feed_dict['lidar'].to(device)
-        targets = feed_dict['targets'].F.to(device).long()
-        with torch.cuda.amp.autocast(enabled=mixed):
-            outputs = model(inputs)
-            loss = criterion(outputs.F, targets)
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
-        print('[step %d] loss = %f.' % (i, loss.item()))
-    print('Finished dummy training!')
+    def __len__(self):
+        return 100
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mixed", action="store_true")
+    parser.add_argument('--amp_enabled', action='store_true')
     args = parser.parse_args()
 
-    # set seeds for reproducibility
-    np.random.seed(2021)
-    torch.manual_seed(2021)
+    random.seed(0)
+    np.random.seed(0)
+    torch.manual_seed(0)
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    dummy_train(device, args.mixed)
+    dataset = RandomDataset(input_size=10000, voxel_size=0.2)
+    dataflow = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=2,
+        collate_fn=sparse_collate_fn,
+    )
+
+    model = nn.Sequential(
+        spnn.Conv3d(4, 32, 3),
+        spnn.BatchNorm(32),
+        spnn.ReLU(True),
+        spnn.Conv3d(32, 64, 2, stride=2),
+        spnn.BatchNorm(64),
+        spnn.ReLU(True),
+        spnn.Conv3d(64, 64, 2, stride=2, transposed=True),
+        spnn.BatchNorm(64),
+        spnn.ReLU(True),
+        spnn.Conv3d(64, 32, 3),
+        spnn.BatchNorm(32),
+        spnn.ReLU(True),
+        spnn.Conv3d(32, 10, 1),
+    ).cuda()
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    scaler = amp.GradScaler(enabled=args.amp_enabled)
+
+    for k, feed_dict in enumerate(dataflow):
+        inputs = feed_dict['input'].cuda()
+        labels = feed_dict['label'].cuda()
+
+        with amp.autocast(enabled=args.amp_enabled):
+            outputs = model(inputs)
+            loss = criterion(outputs.feats, labels.feats)
+
+        print(f'[step {k + 1}] loss = {loss.item()}')
+
+        optimizer.zero_grad()
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()

@@ -1,17 +1,18 @@
 from torch import nn
 
-from torchsparse.sparse_tensor import SparseTensor
+from torchsparse import SparseTensor
+from torchsparse.nn import functional as F
 
-from torchsparse.nn import functional as spF
-
-__all__ = ['GlobalAveragePooling', 'GlobalMaxPooling']
-
-
-class GlobalAveragePooling(nn.Module):
-    def forward(self, inputs):
-        return spF.global_avg_pool(inputs)
+__all__ = ['GlobalAvgPool', 'GlobalMaxPool']
 
 
-class GlobalMaxPooling(nn.Module):
-    def forward(self, inputs):
-        return spF.global_max_pool(inputs)
+class GlobalAvgPool(nn.Module):
+
+    def forward(self, input: SparseTensor) -> SparseTensor:
+        return F.global_avg_pool(input)
+
+
+class GlobalMaxPool(nn.Module):
+
+    def forward(self, input: SparseTensor) -> SparseTensor:
+        return F.global_max_pool(input)

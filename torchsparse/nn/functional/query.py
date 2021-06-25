@@ -1,40 +1,33 @@
 import torch
-import torchsparse_backend
-from torch.autograd import Function
+
+import torchsparse.backend
 
 __all__ = ['sphashquery']
 
 
-class SparseQuery(Function):
-    @staticmethod
-    def forward(ctx, hash_query, hash_target):
-        if len(hash_query.size()) == 2:
-            C = hash_query.size(1)
-        else:
-            C = 1
+def sphashquery(queries: torch.Tensor,
+                references: torch.Tensor) -> torch.Tensor:
+    queries = queries.contiguous()
+    references = references.contiguous()
 
-        idx_target = torch.arange(len(hash_target),
-                                  device=hash_query.device,
-                                  dtype=torch.long)
+    sizes = queries.size()
+    queries = queries.view(-1)
 
-        if 'cuda' in str(hash_query.device):
-            out, key_buf, val_buf, key = torchsparse_backend.query_forward(
-                hash_query.view(-1).contiguous(), hash_target.contiguous(),
-                idx_target)
-        elif 'cpu' in str(hash_query.device):
-            out = torchsparse_backend.cpu_query_forward(
-                hash_query.view(-1).contiguous(), hash_target.contiguous(),
-                idx_target)
-        else:
-            device = hash_query.device
-            out = torchsparse_backend.cpu_query_forward(
-                hash_query.view(-1).contiguous().cpu(),
-                hash_target.contiguous().cpu(), idx_target.cpu()).to(device)
+    indices = torch.arange(len(references),
+                           device=queries.device,
+                           dtype=torch.long)
 
-        if C > 1:
-            out = out.view(-1, C)
-        return (out - 1)
+    if queries.device.type == 'cuda':
+        output = torchsparse.backend.hash_query_cuda(queries, references,
+                                                     indices)
+    elif queries.device.type == 'cpu':
+        output = torchsparse.backend.hash_query_cpu(queries, references,
+                                                    indices)
+    else:
+        device = queries.device
+        output = torchsparse.backend.hash_query_cpu(queries.cpu(),
+                                                    references.cpu(),
+                                                    indices.cpu()).to(device)
 
-
-def sphashquery(hash_query, hash_target):
-    return SparseQuery.apply(hash_query, hash_target)
+    output = (output - 1).view(*sizes)
+    return output
