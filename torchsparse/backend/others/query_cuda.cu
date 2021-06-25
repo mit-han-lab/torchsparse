@@ -38,21 +38,19 @@ at::Tensor hash_query_cuda(const at::Tensor hash_query,
       torch::zeros({num_funcs * table_size},
                    at::device(hash_query.device()).dtype(at::ScalarType::Long));
 
-  in_hash_table.insert_vals(
-      (unsigned long long int *)(hash_target.data_ptr<long>()),
-      (unsigned long long int *)(idx_target.data_ptr<long>()),
-      (unsigned long long int *)(key_buf.data_ptr<long>()),
-      (unsigned long long int *)(val_buf.data_ptr<long>()),
-      (unsigned long long int *)(key.data_ptr<long>()),
-      (unsigned long long int *)(val.data_ptr<long>()), n);
+  in_hash_table.insert_vals((uint64_t *)(hash_target.data_ptr<int64_t>()),
+                            (uint64_t *)(idx_target.data_ptr<int64_t>()),
+                            (uint64_t *)(key_buf.data_ptr<int64_t>()),
+                            (uint64_t *)(val_buf.data_ptr<int64_t>()),
+                            (uint64_t *)(key.data_ptr<int64_t>()),
+                            (uint64_t *)(val.data_ptr<int64_t>()), n);
 
   at::Tensor out = torch::zeros(
       {n1}, at::device(hash_query.device()).dtype(at::ScalarType::Long));
 
-  in_hash_table.lookup_vals(
-      (unsigned long long int *)(hash_query.data_ptr<long>()),
-      (unsigned long long int *)(key.data_ptr<long>()),
-      (unsigned long long int *)(val.data_ptr<long>()),
-      (unsigned long long int *)(out.data_ptr<long>()), n1);
+  in_hash_table.lookup_vals((uint64_t *)(hash_query.data_ptr<int64_t>()),
+                            (uint64_t *)(key.data_ptr<int64_t>()),
+                            (uint64_t *)(val.data_ptr<int64_t>()),
+                            (uint64_t *)(out.data_ptr<int64_t>()), n1);
   return out;
 }
