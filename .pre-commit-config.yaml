@@ -26,6 +26,11 @@ repos:
         name: (YAML) Check syntax
       - id: check-toml
         name: (TOML) Check syntax
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.7
+    hooks:
+      - id: mdformat
+        name: (Markdown) Format with mdformat
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.19.4
     hooks:
