@@ -12,7 +12,9 @@ def spcrop(input: SparseTensor,
            coords_max: Optional[Tuple[int, ...]] = None) -> SparseTensor:
     coords, feats, stride = input.coords, input.feats, input.stride
 
-    mask = torch.ones_like(coords)
+    mask = torch.ones((coords.shape[0], 3),
+                      dtype=torch.bool,
+                      device=coords.device)
     if coords_min is not None:
         coords_min = torch.tensor(coords_min,
                                   dtype=torch.int,
