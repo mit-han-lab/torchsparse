@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "../utils/atomic.cuh"
 #include "hashmap_cuda.cuh"
 
 __global__ void cuckooBucketKernel_Multi(

@@ -1,5 +1,4 @@
-#ifndef _CUCKOO_CUDA_MULTI_HPP_
-#define _CUCKOO_CUDA_MULTI_HPP_
+#pragma once
 
 #include <cmath>
 #include <cstdint>
@@ -138,5 +137,3 @@ __global__ void cuckooLookupKernel_Multi(
     const uint64_t *const all_keys, const uint64_t *const all_vals,
     const int size, const FuncConfig *const hash_func_configs,
     const int num_funcs, const int num_buckets, const int pos_width);
-
-#endif
