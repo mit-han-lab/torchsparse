@@ -4,10 +4,10 @@
 
 #include <vector>
 
-void cpu_hash_wrapper(int N, const int *data, long *out) {
+void cpu_hash_wrapper(int N, const int *data, int64_t *out) {
 #pragma omp parallel for
   for (int i = 0; i < N; i++) {
-    unsigned long long hash = 14695981039346656037UL;
+    uint64_t hash = 14695981039346656037UL;
     for (int j = 0; j < 4; j++) {
       hash ^= (unsigned int)data[4 * i + j];
       hash *= 1099511628211UL;
@@ -18,7 +18,7 @@ void cpu_hash_wrapper(int N, const int *data, long *out) {
 }
 
 void cpu_kernel_hash_wrapper(int N, int K, const int *data,
-                             const int *kernel_offset, long int *out) {
+                             const int *kernel_offset, int64_t *out) {
   for (int k = 0; k < K; k++) {
 #pragma omp parallel for
     for (int i = 0; i < N; i++) {
@@ -27,7 +27,7 @@ void cpu_kernel_hash_wrapper(int N, int K, const int *data,
         cur_coord[j] = data[i * 4 + j] + kernel_offset[k * 3 + j];
       }
       cur_coord[3] = data[3];
-      unsigned long long hash = 14695981039346656037UL;
+      uint64_t hash = 14695981039346656037UL;
       for (int j = 0; j < 4; j++) {
         hash ^= (unsigned int)cur_coord[j];
         hash *= 1099511628211UL;
@@ -42,7 +42,7 @@ at::Tensor hash_cpu(const at::Tensor idx) {
   int N = idx.size(0);
   at::Tensor out =
       torch::zeros({N}, at::device(idx.device()).dtype(at::ScalarType::Long));
-  cpu_hash_wrapper(N, idx.data_ptr<int>(), out.data_ptr<long>());
+  cpu_hash_wrapper(N, idx.data_ptr<int>(), out.data_ptr<int64_t>());
   return out;
 }
 
@@ -53,6 +53,7 @@ at::Tensor kernel_hash_cpu(const at::Tensor idx,
   at::Tensor out = torch::zeros(
       {K, N}, at::device(idx.device()).dtype(at::ScalarType::Long));
   cpu_kernel_hash_wrapper(N, K, idx.data_ptr<int>(),
-                          kernel_offset.data_ptr<int>(), out.data_ptr<long>());
+                          kernel_offset.data_ptr<int>(),
+                          out.data_ptr<int64_t>());
   return out;
 }

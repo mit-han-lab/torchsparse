@@ -44,6 +44,7 @@ class RandomDataset:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--amp_enabled', action='store_true')
     args = parser.parse_args()
 
@@ -72,15 +73,15 @@ if __name__ == '__main__':
         spnn.BatchNorm(32),
         spnn.ReLU(True),
         spnn.Conv3d(32, 10, 1),
-    ).cuda()
+    ).to(args.device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     scaler = amp.GradScaler(enabled=args.amp_enabled)
 
     for k, feed_dict in enumerate(dataflow):
-        inputs = feed_dict['input'].cuda()
-        labels = feed_dict['label'].cuda()
+        inputs = feed_dict['input'].to(device=args.device)
+        labels = feed_dict['label'].to(device=args.device)
 
         with amp.autocast(enabled=args.amp_enabled):
             outputs = model(inputs)

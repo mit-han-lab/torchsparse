@@ -44,6 +44,10 @@ class ConvolutionFunction(Function):
         if input.device.type == 'cuda':
             torchsparse.backend.convolution_forward_cuda(
                 input, output, weight, nbmaps, nbsizes.cpu(), transposed)
+        elif input.device.type == 'cpu':
+            torchsparse.backend.convolution_forward_cpu(input, output, weight,
+                                                        nbmaps, nbsizes.cpu(),
+                                                        transposed)
         else:
             # use the native pytorch XLA APIs for the TPU.
             cur_st = 0
@@ -73,6 +77,10 @@ class ConvolutionFunction(Function):
 
         if grad_output.device.type == 'cuda':
             torchsparse.backend.convolution_backward_cuda(
+                input, grad_input, grad_output.contiguous(), weight,
+                grad_weight, nbmaps, nbsizes.cpu(), transposed)
+        elif grad_output.device.type == 'cpu':
+            torchsparse.backend.convolution_backward_cpu(
                 input, grad_input, grad_output.contiguous(), weight,
                 grad_weight, nbmaps, nbsizes.cpu(), transposed)
         else:
