@@ -6,19 +6,19 @@ TorchSparse is a high-performance neural network library for point cloud process
 
 TorchSparse depends on the [Google Sparse Hash](https://github.com/sparsehash/sparsehash) library.
 
-* On Ubuntu, it can be installed by
+- On Ubuntu, it can be installed by
 
   ```bash
   sudo apt-get install libsparsehash-dev
   ```
 
-* On Mac OS, it can be installed by
+- On Mac OS, it can be installed by
 
   ```bash
   brew install google-sparsehash
   ```
 
-* You can also compile the library locally (if you do not have the sudo permission) and add the library path to the environment variable `CPLUS_INCLUDE_PATH`.
+- You can also compile the library locally (if you do not have the sudo permission) and add the library path to the environment variable `CPLUS_INCLUDE_PATH`.
 
 The latest released TorchSparse (v1.4.0) can then be installed by
 
@@ -44,8 +44,9 @@ We compare TorchSparse with [MinkowskiEngine](https://github.com/NVIDIA/Minkowsk
 ### Sparse Tensor
 
 Sparse tensor (`SparseTensor`) is the main data structure for point cloud, which has two data fields:
-* Coordinates (`coords`): a 2D integer tensor with a shape of N x 4, where the first three dimensions correspond to quantized x, y, z coordinates, and the last dimension denotes the batch index.
-* Features (`feats`): a 2D tensor with a shape of N x C, where C is the number of feature channels.
+
+- Coordinates (`coords`): a 2D integer tensor with a shape of N x 4, where the first three dimensions correspond to quantized x, y, z coordinates, and the last dimension denotes the batch index.
+- Features (`feats`): a 2D tensor with a shape of N x C, where C is the number of feature channels.
 
 Most existing datasets provide raw point cloud data with float coordinates. We can use `sparse_quantize` (provided in `torchsparse.utils.quantize`) to voxelize x, y, z coordinates and remove duplicates:
 
