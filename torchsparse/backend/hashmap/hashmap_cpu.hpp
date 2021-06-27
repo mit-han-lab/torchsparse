@@ -1,5 +1,4 @@
-#ifndef _CUCKOO_MULTI_CPU_HPP_
-#define _CUCKOO_MULTI_CPU_HPP_
+#pragma once
 
 #include <cmath>
 #include <cstdint>
@@ -23,5 +22,3 @@ class HashTableCPU {
   void lookup_vals(const int64_t* const keys, int64_t* const results,
                    const int n);
 };
-
-#endif

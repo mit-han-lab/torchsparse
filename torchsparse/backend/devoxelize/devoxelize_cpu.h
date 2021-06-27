@@ -1,5 +1,4 @@
-#ifndef TORCHSPARSE_DEVOXELIZE_CPU
-#define TORCHSPARSE_DEVOXELIZE_CPU
+#pragma once
 
 #include <torch/torch.h>
 
@@ -10,5 +9,3 @@ at::Tensor devoxelize_forward_cpu(const at::Tensor feat,
 at::Tensor devoxelize_backward_cpu(const at::Tensor top_grad,
                                    const at::Tensor indices,
                                    const at::Tensor weight, int n);
-
-#endif
