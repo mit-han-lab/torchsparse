@@ -9,7 +9,7 @@ __all__ = ['sparse_quantize']
 def ravel_hash(x: np.ndarray) -> np.ndarray:
     assert x.ndim == 2, x.shape
 
-    x -= np.min(x, axis=0)
+    x = x - np.min(x, axis=0)
     x = x.astype(np.uint64, copy=False)
     xmax = np.max(x, axis=0).astype(np.uint64) + 1
 
