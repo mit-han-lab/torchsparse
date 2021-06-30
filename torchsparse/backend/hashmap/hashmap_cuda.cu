@@ -2,16 +2,13 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "../utils/atomic.cuh"
 #include "hashmap_cuda.cuh"
 
-typedef unsigned long long int VTYPE;
-
-__global__ void cuckooBucketKernel_Multi(VTYPE *const key_buf,
-                                         VTYPE *const val_buf, const int size,
-                                         const VTYPE *const keys,
-                                         const VTYPE *const vals, const int n,
-                                         int *const counters,
-                                         const int num_buckets) {
+__global__ void cuckooBucketKernel_Multi(
+    uint64_t *const key_buf, uint64_t *const val_buf, const int size,
+    const uint64_t *const keys, const uint64_t *const vals, const int n,
+    int *const counters, const int num_buckets) {
   // Get thread index.
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -19,8 +16,8 @@ __global__ void cuckooBucketKernel_Multi(VTYPE *const key_buf,
   if (idx < n) {
     // Do 1st-level hashing to get bucket id, then do atomic add to get index
     // inside the bucket.
-    VTYPE key = keys[idx];
-    VTYPE val = vals[idx];
+    uint64_t key = keys[idx];
+    uint64_t val = vals[idx];
 
     int bucket_num = do_1st_hash(key, num_buckets);
     int bucket_ofs = atomicAdd(&counters[bucket_num], 1);
@@ -37,14 +34,14 @@ __global__ void cuckooBucketKernel_Multi(VTYPE *const key_buf,
 }
 
 __global__ void cuckooInsertKernel_Multi(
-    VTYPE *const key, VTYPE *const val, const VTYPE *const key_buf,
-    const VTYPE *const val_buf, const int size,
+    uint64_t *const key, uint64_t *const val, const uint64_t *const key_buf,
+    const uint64_t *const val_buf, const int size,
     const FuncConfig *const hash_func_configs, const int num_funcs,
     const int *const counters, const int num_buckets, const int evict_bound,
     const int pos_width, int *const rehash_requests) {
   // Create local cuckoo table in shared memory. Size passed in as the third
   // kernel parameter.
-  extern __shared__ VTYPE local_key[];
+  extern __shared__ uint64_t local_key[];
   for (int i = 0; i < num_funcs; ++i) {
     local_key[i * BUCKET_SIZE + threadIdx.x] = EMPTY_CELL;
   }
@@ -54,12 +51,12 @@ __global__ void cuckooInsertKernel_Multi(
 
   // Get thread index.
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  VTYPE cur_idx = idx;
+  uint64_t cur_idx = idx;
 
   // Only threads within local bucket range are active.
   if (threadIdx.x < counters[blockIdx.x]) {
     // Set initial conditions.
-    VTYPE cur_key = key_buf[cur_idx];
+    uint64_t cur_key = key_buf[cur_idx];
     int cur_func = 0;
     int evict_count = 0;
 
@@ -67,9 +64,9 @@ __global__ void cuckooInsertKernel_Multi(
     do {
       int pos = do_2nd_hash(cur_key, hash_func_configs, cur_func, BUCKET_SIZE);
 
-      VTYPE new_data = make_data(cur_idx + 1, cur_func, pos_width);
+      uint64_t new_data = make_data(cur_idx + 1, cur_func, pos_width);
 
-      VTYPE old_idx =
+      uint64_t old_idx =
           atomicExch(&local_key[cur_func * BUCKET_SIZE + pos], new_data);
 
       if (old_idx != EMPTY_CELL) {
@@ -93,7 +90,7 @@ __global__ void cuckooInsertKernel_Multi(
   // Every thread write its responsible local slot into the global data table.
   __syncthreads();
   for (int i = 0; i < num_funcs; ++i) {
-    VTYPE cur_idx = local_key[i * BUCKET_SIZE + threadIdx.x];
+    uint64_t cur_idx = local_key[i * BUCKET_SIZE + threadIdx.x];
     if (cur_idx == EMPTY_CELL) {
       continue;
     }
@@ -105,15 +102,15 @@ __global__ void cuckooInsertKernel_Multi(
 }
 
 __global__ void cuckooLookupKernel_Multi(
-    const VTYPE *const keys, VTYPE *const results, const int n,
-    const VTYPE *const all_keys, const VTYPE *const all_vals, const int size,
-    const FuncConfig *const hash_func_configs, const int num_funcs,
-    const int num_buckets, const int pos_width) {
+    const uint64_t *const keys, uint64_t *const results, const int n,
+    const uint64_t *const all_keys, const uint64_t *const all_vals,
+    const int size, const FuncConfig *const hash_func_configs,
+    const int num_funcs, const int num_buckets, const int pos_width) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
   // Only threads within range are active.
   if (idx < n) {
-    VTYPE key = keys[idx];
+    uint64_t key = keys[idx];
     int bucket_num = do_1st_hash(key, num_buckets);
     for (int i = 0; i < num_funcs; ++i) {
       int pos = bucket_num * BUCKET_SIZE +
@@ -129,20 +126,21 @@ __global__ void cuckooLookupKernel_Multi(
   }
 }
 
-void CuckooHashTableCuda_Multi::lookup_vals(const VTYPE *const keys,
-                                            VTYPE *d_key, VTYPE *d_val,
-                                            VTYPE *const results, const int n) {
+void CuckooHashTableCuda_Multi::lookup_vals(const uint64_t *const keys,
+                                            uint64_t *d_key, uint64_t *d_val,
+                                            uint64_t *const results,
+                                            const int n) {
   // Launch the lookup kernel.
   cuckooLookupKernel_Multi<<<ceil((double)n / BUCKET_SIZE), BUCKET_SIZE>>>(
       keys, results, n, d_key, d_val, _size, _d_hash_func_configs, _num_funcs,
       _num_buckets, _pos_width);
 }
 
-int CuckooHashTableCuda_Multi::insert_vals(const VTYPE *const keys,
-                                           const VTYPE *const vals,
-                                           VTYPE *d_key_buf, VTYPE *d_val_buf,
-                                           VTYPE *d_key, VTYPE *d_val,
-                                           const int n) {
+int CuckooHashTableCuda_Multi::insert_vals(const uint64_t *const keys,
+                                           const uint64_t *const vals,
+                                           uint64_t *d_key_buf,
+                                           uint64_t *d_val_buf, uint64_t *d_key,
+                                           uint64_t *d_val, const int n) {
   //
   // Phase 1: Distribute keys into buckets.
   //
@@ -182,7 +180,7 @@ int CuckooHashTableCuda_Multi::insert_vals(const VTYPE *const keys,
     int rehash_requests = 0;
     cudaMemset(d_rehash_requests, 0, sizeof(int));
     cuckooInsertKernel_Multi<<<ceil((double)_size / BUCKET_SIZE), BUCKET_SIZE,
-                               _num_funcs * BUCKET_SIZE * sizeof(VTYPE)>>>(
+                               _num_funcs * BUCKET_SIZE * sizeof(uint64_t)>>>(
         d_key, d_val, d_key_buf, d_val_buf, _size, _d_hash_func_configs,
         _num_funcs, d_counters, _num_buckets, _evict_bound, _pos_width,
         d_rehash_requests);

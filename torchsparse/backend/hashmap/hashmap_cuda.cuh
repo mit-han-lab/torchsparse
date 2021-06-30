@@ -1,5 +1,4 @@
-#ifndef _CUCKOO_CUDA_MULTI_HPP_
-#define _CUCKOO_CUDA_MULTI_HPP_
+#pragma once
 
 #include <cmath>
 #include <cstdint>
@@ -19,8 +18,6 @@
 /** CUDA multi-level thread block size = bucket size. */
 #define BUCKET_SIZE (512)
 
-typedef unsigned long long int VTYPE;
-
 /** Struct of a hash function config. */
 typedef struct {
   int rv;  // Randomized XOR value.
@@ -29,11 +26,11 @@ typedef struct {
 
 /** Hard code hash functions and all inline helper functions for CUDA kernels'
  * use. */
-inline __device__ int do_1st_hash(const VTYPE val, const int num_buckets) {
+inline __device__ int do_1st_hash(const uint64_t val, const int num_buckets) {
   return val % num_buckets;
 }
 
-inline __device__ int do_2nd_hash(const VTYPE val,
+inline __device__ int do_2nd_hash(const uint64_t val,
                                   const FuncConfig *const hash_func_configs,
                                   const int func_idx, const int size) {
   FuncConfig fc = hash_func_configs[func_idx];
@@ -41,16 +38,16 @@ inline __device__ int do_2nd_hash(const VTYPE val,
 }
 
 // trying to ignore EMPTY_CELL by adding 1 at make_data.
-inline __device__ VTYPE fetch_val(const VTYPE data, const int pos_width) {
+inline __device__ uint64_t fetch_val(const uint64_t data, const int pos_width) {
   return data >> pos_width;
 }
 
-inline __device__ int fetch_func(const VTYPE data, const int pos_width) {
+inline __device__ int fetch_func(const uint64_t data, const int pos_width) {
   return data & ((0x1 << pos_width) - 1);
 }
 
-inline __device__ VTYPE make_data(const VTYPE val, const int func,
-                                  const int pos_width) {
+inline __device__ uint64_t make_data(const uint64_t val, const int func,
+                                     const int pos_width) {
   return (val << pos_width) ^ func;
 }
 
@@ -70,7 +67,7 @@ class CuckooHashTableCuda_Multi {
   /** Private operations. */
   void gen_hash_funcs() {
     // Calculate bit width of value range and table size.
-    int val_width = 8 * sizeof(VTYPE) - ceil(log2((double)_num_funcs));
+    int val_width = 8 * sizeof(uint64_t) - ceil(log2((double)_num_funcs));
     int bucket_width = ceil(log2((double)_num_buckets));
     int size_width = ceil(log2((double)BUCKET_SIZE));
     // Generate randomized configurations.
@@ -85,8 +82,8 @@ class CuckooHashTableCuda_Multi {
     }
   };
 
-  inline VTYPE fetch_val(const VTYPE data) { return data >> _pos_width; }
-  inline int fetch_func(const VTYPE data) {
+  inline uint64_t fetch_val(const uint64_t data) { return data >> _pos_width; }
+  inline int fetch_func(const uint64_t data) {
     return data & ((0x1 << _pos_width) - 1);
   }
 
@@ -115,32 +112,28 @@ class CuckooHashTableCuda_Multi {
     if (_d_hash_func_configs != NULL) cudaFree(_d_hash_func_configs);
   };
 
-  int insert_vals(const VTYPE *const keys, const VTYPE *const vals,
-                  VTYPE *d_key_buf, VTYPE *d_val_buf, VTYPE *d_key,
-                  VTYPE *d_val, const int n);
+  int insert_vals(const uint64_t *const keys, const uint64_t *const vals,
+                  uint64_t *d_key_buf, uint64_t *d_val_buf, uint64_t *d_key,
+                  uint64_t *d_val, const int n);
 
-  void lookup_vals(const VTYPE *const keys, VTYPE *const results, VTYPE *d_key,
-                   VTYPE *d_val, const int n);
+  void lookup_vals(const uint64_t *const keys, uint64_t *const results,
+                   uint64_t *d_key, uint64_t *d_val, const int n);
 };
 
-__global__ void cuckooBucketKernel_Multi(VTYPE *const key_buf,
-                                         VTYPE *const val_buf, const int size,
-                                         const VTYPE *const keys,
-                                         const VTYPE *const vals, const int n,
-                                         int *const counters,
-                                         const int num_buckets);
+__global__ void cuckooBucketKernel_Multi(
+    uint64_t *const key_buf, uint64_t *const val_buf, const int size,
+    const uint64_t *const keys, const uint64_t *const vals, const int n,
+    int *const counters, const int num_buckets);
 
 __global__ void cuckooInsertKernel_Multi(
-    VTYPE *const key, VTYPE *const val, const VTYPE *const key_buf,
-    const VTYPE *const val_buf, const int size,
+    uint64_t *const key, uint64_t *const val, const uint64_t *const key_buf,
+    const uint64_t *const val_buf, const int size,
     const FuncConfig *const hash_func_configs, const int num_funcs,
     const int *const counters, const int num_buckets, const int evict_bound,
     const int pos_width, int *const rehash_requests);
 
 __global__ void cuckooLookupKernel_Multi(
-    const VTYPE *const keys, VTYPE *const results, const int n,
-    const VTYPE *const all_keys, const VTYPE *const all_vals, const int size,
-    const FuncConfig *const hash_func_configs, const int num_funcs,
-    const int num_buckets, const int pos_width);
-
-#endif
+    const uint64_t *const keys, uint64_t *const results, const int n,
+    const uint64_t *const all_keys, const uint64_t *const all_vals,
+    const int size, const FuncConfig *const hash_func_configs,
+    const int num_funcs, const int num_buckets, const int pos_width);

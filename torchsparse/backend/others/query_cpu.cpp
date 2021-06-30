@@ -20,16 +20,16 @@ at::Tensor hash_query_cpu(const at::Tensor hash_query,
   at::Tensor out = torch::zeros(
       {n1}, at::device(hash_query.device()).dtype(at::ScalarType::Long));
   for (int idx = 0; idx < n; idx++) {
-    int64_t key = *(hash_target.data_ptr<long>() + idx);
-    int64_t val = *(idx_target.data_ptr<long>() + idx) + 1;
+    int64_t key = *(hash_target.data_ptr<int64_t>() + idx);
+    int64_t val = *(idx_target.data_ptr<int64_t>() + idx) + 1;
     hashmap.insert(std::make_pair(key, val));
   }
 #pragma omp parallel for
   for (int idx = 0; idx < n1; idx++) {
-    int64_t key = *(hash_query.data_ptr<long>() + idx);
+    int64_t key = *(hash_query.data_ptr<int64_t>() + idx);
     google::dense_hash_map<int64_t, int64_t>::iterator iter = hashmap.find(key);
     if (iter != hashmap.end()) {
-      *(out.data_ptr<long>() + idx) = iter->second;
+      *(out.data_ptr<int64_t>() + idx) = iter->second;
     }
   }
 
