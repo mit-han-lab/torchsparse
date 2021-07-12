@@ -75,6 +75,27 @@ model = nn.Sequential(
 )
 ```
 
+## Frequently Asked Questions
+Before posting an issue, please go through the following troubleshooting steps:
+- Check whether the issue is torchsparse specific or enviornment specific.
+- Read the error logs closely - if it's a compilation error, the problem will be shown in the log. Often, compilation issues will come from incorrect enviornment (pytorch/nvcc) configuration, rather than incompatibility with this library.
+- Try [completely uninstalling CUDA](https://askubuntu.com/q/530043) and make sure that there are no additional cuda installations:
+  ```bash
+  ls /usr/local/cuda* -d
+  ```
+- Then, follow **all** of the steps for toolkit installation in the [cuda installation guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html), especially the [post installation actions](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#post-installation-actions) to set your `LD_LIBRARY_PATH` and `PATH`.
+- Ensure that pytorch and nvcc are using the same version of cuda: 
+
+  ```bash
+  nvcc --version
+  python -c "import torch; print(torch.version.cuda);"
+  ```
+- If you're trying to cross compile the library (i.e. compiling for a different GPU than the one at build time, such as in a dockerfile), make use of the `TORCH_CUDA_ARCH_LIST` enviornmental variableYou can use [this chart](http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/) to find your architecture/gencode. For example, if you want to compile for a Turing-architecture GPU, you would do:
+
+  ```bash
+  TORCH_CUDA_ARCH_LIST="7.0;7.5" pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git
+  ```
+
 ## Citation
 
 If you use TorchSparse in your research, please use the following BibTeX entry:
