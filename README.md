@@ -95,6 +95,10 @@ Before posting an issue, please go through the following troubleshooting steps:
   ```bash
   TORCH_CUDA_ARCH_LIST="7.0;7.5" pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git
   ```
+- If you see `Killed` in the compilation log, it's likely the compilation failed due to out of memory as a result of parallel compilation. You can limit the number of CPUs the compiler will use by setting the `MAX_JOBS` enviornmental variable before installing:
+  ```bash
+  MAX_JOBS=2 pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git
+  ```
 
 ## Citation
 
