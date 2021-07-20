@@ -26,7 +26,9 @@ The latest released TorchSparse (v1.4.0) can then be installed by
 pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@v1.4.0
 ```
 
-If you use TorchSparse in your code, please remember to specify the exact version as your dependencies.
+If you use TorchSparse in your code, please remember to specify the exact version in your dependencies.
+
+For installation help and troubleshooting, please consult the [Frequently Asked Questions](./docs/FAQ.md) before posting an issue.
 
 ## Benchmark
 
