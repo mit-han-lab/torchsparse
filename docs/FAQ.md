@@ -32,5 +32,3 @@ Before posting an issue, please go through the following troubleshooting steps o
   ```bash
   MAX_JOBS=2 pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git
   ```
-
-- **If submitting an issue related to a compilation error, please upload the full log message of** `pip install -v git+https://github.com/mit-han-lab/torchsparse.git` **to** https://gist.github.com/ **and provide a link within your issue.**
