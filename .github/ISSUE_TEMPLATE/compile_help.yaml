@@ -12,7 +12,7 @@ body:
       required: true
 - type: checkboxes
   attributes:
-    label: Have I followed all the steps in the [FAQ](./docs/FAQ.md)?
+    label: Have I followed all the steps in the [FAQ](docs/FAQ.md)?
     description: Please follow all the steps in the FAQ before filing an issue.
     options:
     - label: I have tried the steps in the FAQ.
