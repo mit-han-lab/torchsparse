@@ -55,7 +55,7 @@ body:
     value: |
         <details>
           <summary>Error Log</summary>
-          
+
           [PUT YOUR ERROR LOG HERE]
         </details>
   validations:

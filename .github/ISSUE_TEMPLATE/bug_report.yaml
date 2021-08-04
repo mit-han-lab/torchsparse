@@ -33,11 +33,11 @@ body:
         - **PyTorch CUDA**: `python -c "import torch; print(torch.version.cuda)"`
         - **TorchSparse**: `python -c "import torchsparse; print(torchsparse.__version__)"`
     value: |
-        - GCC: 
-        - NVCC: 
-        - PyTorch: 
-        - PyTorch CUDA: 
-        - TorchSparse: 
+        - GCC:
+        - NVCC:
+        - PyTorch:
+        - PyTorch CUDA:
+        - TorchSparse:
     render: markdown
   validations:
     required: false
