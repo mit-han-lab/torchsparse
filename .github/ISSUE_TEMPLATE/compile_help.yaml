@@ -12,8 +12,8 @@ body:
       required: true
 - type: checkboxes
   attributes:
-    label: Have I followed all the steps in the [FAQ](./docs/FAQ.md)?
-    description: Please follow all the steps in the FAQ before filing an issue.
+    label: Have I followed all the steps in the FAQ?
+    description: Please follow all the steps [in the FAQ](../blob/master/docs/FAQ.md) before filing an issue.
     options:
     - label: I have tried the steps in the FAQ.
       required: true
@@ -56,7 +56,7 @@ body:
         <details>
           <summary>Error Log</summary>
 
-          [ERROR-LOG]
+          [PUT YOUR ERROR LOG HERE]
         </details>
   validations:
     required: false
