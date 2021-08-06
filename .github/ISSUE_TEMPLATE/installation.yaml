@@ -1,0 +1,62 @@
+name: Installation
+description: Get help with installation issues, including missing imports.
+title: "[Installation] <title>"
+labels: [installation]
+body:
+- type: checkboxes
+  attributes:
+    label: Is there an existing issue for this?
+    description: Please search to see if an issue already exists for the bug you encountered.
+    options:
+    - label: I have searched the existing issues
+      required: true
+- type: checkboxes
+  attributes:
+    label: Have you followed all the steps in the FAQ?
+    description: Please follow all the steps [in the FAQ](../blob/master/docs/FAQ.md) before filing an issue.
+    options:
+    - label: I have tried the steps in the FAQ.
+      required: true
+- type: textarea
+  attributes:
+    label: Current Behavior
+    description: A concise description of what you're experiencing.
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Error Line
+    description: |
+      Look through the log of `FORCE_CUDA=1 pip install --no-cache-dir git+https://github.com/mit-han-lab/torchsparse.git` to find the line that is causing the build to fail.
+      For example: `fatal error: cuda_runtime_api.h: No such file or directory` is one such compilation error message.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Environment
+    description: |
+      How to find these values:
+        - **GCC**: `gcc --version`
+        - **NVCC**: `nvcc --version`
+        - **PyTorch**: `python -c "import torch; print(torch.__version__)"`
+        - **PyTorch CUDA**: `python -c "import torch; print(torch.version.cuda)"`
+    value: |
+        - GCC:
+        - NVCC:
+        - PyTorch:
+        - PyTorch CUDA:
+    render: markdown
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Full Error Log
+    description: Provide the full error log of both your import error and the log of `FORCE_CUDA=1 pip install --no-cache-dir git+https://github.com/mit-han-lab/torchsparse.git`.
+    value: |
+        <details>
+          <summary>Error Log</summary>
+
+          [PUT YOUR ERROR LOG HERE]
+        </details>
+  validations:
+    required: false
