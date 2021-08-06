@@ -1,7 +1,7 @@
-name: Compilation/Installation Help
+name: Installation
 description: Get help with installation issues, including missing imports.
-title: "[INSTALLATION] <title>"
-labels: [Installation Help]
+title: "[Installation] <title>"
+labels: [installation]
 body:
 - type: checkboxes
   attributes:
@@ -12,7 +12,7 @@ body:
       required: true
 - type: checkboxes
   attributes:
-    label: Have I followed all the steps in the FAQ?
+    label: Have you followed all the steps in the FAQ?
     description: Please follow all the steps [in the FAQ](../blob/master/docs/FAQ.md) before filing an issue.
     options:
     - label: I have tried the steps in the FAQ.
