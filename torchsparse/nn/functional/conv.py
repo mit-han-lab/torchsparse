@@ -66,17 +66,17 @@ class ConvolutionFunction(Function):
                 transposed,
             )
         else:
-            cur_st = 0
+            a = 0
             for k in range(weight.shape[0]):
-                cur_ed = cur_st + nbsizes[k]
-                imap = nbmaps[cur_st:cur_ed, 0].long()
-                omap = nbmaps[cur_st:cur_ed, 1].long()
-                cur_st += nbsizes[k]
-
-                if transposed:
-                    imap, omap = omap, imap
-
-                output[omap] += torch.mm(input[imap], weight[k])
+                b = a + nbsizes[k]
+                if not transposed:
+                    i = nbmaps[a:b, 0].long()
+                    o = nbmaps[a:b, 1].long()
+                else:
+                    i = nbmaps[a:b, 1].long()
+                    o = nbmaps[a:b, 0].long()
+                output[o] += torch.mm(input[i], weight[k])
+                a += nbsizes[k]
 
         ctx.for_backwards = (input, weight, nbmaps, nbsizes, transposed)
         return output
