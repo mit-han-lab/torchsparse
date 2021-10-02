@@ -172,7 +172,7 @@ def conv3d(
             nbmaps[:, 0] = results.view(-1)[indices]
 
             input.kmaps[(input.stride, kernel_size, stride, dilation)] = [
-                nbmaps, nbsizes, (input.feats.shape[0], input.coords.shape[0])
+                nbmaps, nbsizes, (input.coords.shape[0], output_coords.shape[0])
             ]
 
         output_feats = ConvolutionFunction.apply(
