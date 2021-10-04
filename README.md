@@ -60,7 +60,7 @@ feats = torch.tensor(feats[indices], dtype=torch.float)
 tensor = SparseTensor(coords=coords, feats=feats)
 ```
 
-We can then use `sparse_collate_fn` (provided in `torchsparse.utils.collate`) to assemble a batch of `SparseTensor`'s (and add the batch dimension to `coords`). Please refer to [this example](https://github.com/mit-han-lab/torchsparse/blob/dev/pre-commit/examples/example.py) for more details.
+We can then use `sparse_collate_fn` (provided in `torchsparse.utils.collate`) to assemble a batch of `SparseTensor`'s (and add the batch dimension to `coords`). Please refer to [this example](./examples/example.py) for more details.
 
 ### Sparse Neural Network
 
