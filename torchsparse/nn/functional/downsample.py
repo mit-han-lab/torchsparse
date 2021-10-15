@@ -24,8 +24,8 @@ def spdownsample(
 
     if all(stride[k] in [1, kernel_size[k]] for k in range(3)):
         coords = coords.clone()
-        coords[:, :3] = torch.div(
-            coords[:, :3], sample_stride).trunc() * sample_stride
+        coords[:, :3] = torch.div(coords[:, :3],
+                                  sample_stride).trunc() * sample_stride
     else:
         offsets = get_kernel_offsets(kernel_size,
                                      tensor_stride,
