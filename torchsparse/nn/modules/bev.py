@@ -88,11 +88,10 @@ class ToDenseBEVConvolution(nn.Module):
 
         kernel = torch.index_select(
             self.kernel, 0,
-            torch.div(coords[:, self.dim], stride,
-                      rounding_mode='trunc').long())
+            torch.div(coords[:, self.dim], stride).trunc().long())
         feats = (feats.unsqueeze(dim=-1) * kernel).sum(1) + self.bias
         coords = (coords - self.offset).t()[[3] + self.bev_dims].long()
-        coords[1:] = torch.div(coords[1:], stride, rounding_mode='trunc').long()
+        coords[1:] = torch.div(coords[1:], stride).trunc().long()
         indices = coords[0] * int(self.bev_shape.prod()) + coords[1] * int(
             self.bev_shape[1]) + coords[2]
         batch_size = coords[0].max().item() + 1
@@ -144,8 +143,7 @@ class ToBEVConvolution(nn.Module):
 
         kernels = torch.index_select(
             self.kernel, 0,
-            torch.div(coords[:, self.dim].long(), stride,
-                      rounding_mode='trunc'))
+            torch.div(coords[:, self.dim].long(), stride).trunc())
         feats = (feats.unsqueeze(dim=-1) * kernels).sum(1) + self.bias
         coords = coords.t().long()
         coords[self.dim, :] = 0
@@ -199,7 +197,7 @@ class ToBEVHeightCompression(nn.Module):
         # now stride must be torch.Tensor since input.s is tuple.
         stride = stride[:, self.bev_dims + [self.dim]].t()
 
-        coords[1:] = torch.div(coords[1:], stride, rounding_mode='trunc').long()
+        coords[1:] = torch.div(coords[1:], stride).trunc().long()
         coords[-1] = torch.clamp(coords[-1], 0, shape[-1] - 1)
         indices = coords[0] * int(shape.prod()) + coords[1] * int(
             shape[1:].prod()) + coords[2] * int(shape[2]) + coords[3]
