@@ -52,17 +52,23 @@ repos:
     hooks:
       - id: flake8
         name: (Python) Check with flake8
-        additional_dependencies: [flake8-bugbear, flake8-comprehensions, flake8-docstrings, flake8-executable, flake8-quotes]
+        additional_dependencies:
+          - flake8-bugbear
+          - flake8-comprehensions
+          - flake8-docstrings
+          - flake8-executable
+          - flake8-quotes
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.902
     hooks:
       - id: mypy
         name: (Python) Check with mypy
-        additional_dependencies: [tokenize-rt]
-  - repo: local
+        additional_dependencies:
+          - tokenize-rt
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v13.0.0
     hooks:
       - id: clang-format
         name: (C/C++/CUDA) Format with clang-format
-        entry: clang-format -style=google -i
-        language: system
-        files: \.(h\+\+|h|hh|hxx|hpp|cuh|c|cc|cpp|cu|c\+\+|cxx|tpp|txx)$
+        types_or: [c, c++, cuda]
+        args: ['-style=google', '-i']
