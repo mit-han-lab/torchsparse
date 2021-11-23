@@ -72,5 +72,5 @@ repos:
     hooks:
       - id: clang-format
         name: (C/C++/CUDA) Format with clang-format
-        types_or: [c, c++, cuda]
         args: [-style=google, -i]
+        types_or: [c, c++, cuda]
