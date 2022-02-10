@@ -79,7 +79,16 @@ model = nn.Sequential(
 
 ## Citation
 
-If you use TorchSparse in your research, please use the following BibTeX entry:
+If you use TorchSparse in your research, please use the following BibTeX entries:
+
+```bibtex
+@inproceedings{tang2022torchsparse,
+  title = {{TorchSparse: Efficient Point Cloud Inference Engine}},
+  author = {Tang, Haotian and Liu, Zhijian and Li, Xiuyu and Lin, Yujun and Han, Song},
+  booktitle = {Conference on Machine Learning and Systems (MLSys)},
+  year = {2022}
+}
+```
 
 ```bibtex
 @inproceedings{tang2020searching,
