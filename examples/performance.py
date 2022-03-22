@@ -19,9 +19,7 @@ def generate_random_point_cloud(size=100000, voxel_size=0.2):
     labels = np.random.choice(10, size)
     coords, feats = pc[:, :3], pc
     coords -= np.min(coords, axis=0, keepdims=True)
-    coords, indices = sparse_quantize(coords,
-                                      voxel_size,
-                                      return_index=True)
+    coords, indices = sparse_quantize(coords, voxel_size, return_index=True)
 
     coords = torch.tensor(coords, dtype=torch.int)
     feats = torch.tensor(feats[indices], dtype=torch.float)
