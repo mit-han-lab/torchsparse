@@ -21,7 +21,8 @@ class Conv3d(nn.Module):
                  stride: Union[int, Tuple[int, ...]] = 1,
                  dilation: int = 1,
                  bias: bool = False,
-                 transposed: bool = False) -> None:
+                 transposed: bool = False,
+                 config=None) -> None:
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -29,6 +30,20 @@ class Conv3d(nn.Module):
         self.stride = make_ntuple(stride, ndim=3)
         self.dilation = dilation
         self.transposed = transposed
+
+        # if config == None:
+        #     config = defaultdict(int)
+        #     if kernel_size == 3:
+        #         config = {'epsilon': 0.4, 'mm_thresh': 20000}
+        #     elif kernel_size == 2:
+        #         config = {'epsilon': 1.0, 'mm_thresh': 20000}
+        if config is None:
+            config = {}
+        config['epsilon'] = config.get('epsilon', 0.0)
+        config['mm_thresh'] = config.get('mm_thresh', 0)
+        config['kmap_mode'] = config.get('kmap_mode', 'hashmap')
+        config['conv_mode'] = config.get('conv_mode', 'default')
+        self.config = config
 
         self.kernel_volume = int(np.prod(self.kernel_size))
         if self.kernel_volume > 1:
@@ -69,4 +84,8 @@ class Conv3d(nn.Module):
                         bias=self.bias,
                         stride=self.stride,
                         dilation=self.dilation,
-                        transposed=self.transposed)
+                        transposed=self.transposed,
+                        epsilon=self.config['epsilon'],
+                        mm_thresh=self.config['mm_thresh'],
+                        kmap_mode=self.config['kmap_mode'],
+                        conv_mode=self.config['conv_mode'])

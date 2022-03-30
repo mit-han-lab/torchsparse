@@ -13,4 +13,5 @@ def fapply(input: SparseTensor, fn: Callable[..., torch.Tensor], *args,
     output = SparseTensor(coords=input.coords, feats=feats, stride=input.stride)
     output.cmaps = input.cmaps
     output.kmaps = input.kmaps
+    output.buffer = input.buffer
     return output

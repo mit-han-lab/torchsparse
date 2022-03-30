@@ -7,7 +7,6 @@ from torch.cuda.amp import custom_bwd, custom_fwd
 import torchsparse.backend
 from torchsparse import SparseTensor
 from torchsparse.nn import functional as F
-from torchsparse.nn.utils import get_kernel_offsets
 from torchsparse.utils import make_ntuple
 
 __all__ = ['conv3d']
@@ -17,76 +16,71 @@ class ConvolutionFunction(Function):
 
     @staticmethod
     @custom_fwd(cast_inputs=torch.half)
-    def forward(
-        ctx,
-        input: torch.Tensor,
-        weight: torch.Tensor,
-        nbmaps: torch.Tensor,
-        nbsizes: torch.Tensor,
-        sizes: Tuple[int, int],
-        transposed: bool = False,
-    ) -> torch.Tensor:
+    def forward(ctx,
+                input: torch.Tensor,
+                weight: torch.Tensor,
+                nbmaps: torch.Tensor,
+                nbsizes: torch.Tensor,
+                buffer: torch.Tensor,
+                sizes: Tuple[int, int],
+                input_mask: torch.Tensor,
+                output_mask: torch.Tensor,
+                epsilon: float,
+                mm_thresh: int,
+                conv_mode: int,
+                transposed: bool = False) -> torch.Tensor:
         input = input.contiguous()
         weight = weight.contiguous()
         nbmaps = nbmaps.int().contiguous()
         nbsizes = nbsizes.int().contiguous()
 
         if not transposed:
-            output = torch.zeros(
-                sizes[1],
-                weight.size(-1),
-                dtype=input.dtype,
-                device=input.device,
-            )
+            output = torch.zeros(sizes[1],
+                                 weight.size(-1),
+                                 dtype=input.dtype,
+                                 device=input.device)
         else:
             # TODO(Haotian): ensure the original, upsampled size to be the same.
-            output = torch.zeros(
-                sizes[0],
-                weight.size(-1),
-                dtype=input.dtype,
-                device=input.device,
-            )
+            output = torch.zeros(sizes[0],
+                                 weight.size(-1),
+                                 dtype=input.dtype,
+                                 device=input.device)
+
+        # fallback to default for training
+        if input.requires_grad:
+            conv_mode = 0
 
         if input.device.type == 'cuda':
             torchsparse.backend.convolution_forward_cuda(
-                input,
-                output,
-                weight,
-                nbmaps,
-                nbsizes.cpu(),
-                transposed,
-            )
+                input, output, weight,
+                nbmaps, nbsizes.cpu(), input_mask, output_mask, epsilon,
+                int(mm_thresh), conv_mode, transposed, buffer)
         elif input.device.type == 'cpu':
-            torchsparse.backend.convolution_forward_cpu(
-                input,
-                output,
-                weight,
-                nbmaps,
-                nbsizes.cpu(),
-                transposed,
-            )
+            torchsparse.backend.convolution_forward_cpu(input, output, weight,
+                                                        nbmaps, nbsizes.cpu(),
+                                                        transposed)
         else:
-            a = 0
-            for k in range(weight.shape[0]):
-                b = a + nbsizes[k]
-                if not transposed:
-                    i = nbmaps[a:b, 0].long()
-                    o = nbmaps[a:b, 1].long()
-                else:
-                    i = nbmaps[a:b, 1].long()
-                    o = nbmaps[a:b, 0].long()
-                output[o] += torch.mm(input[i], weight[k])
-                a += nbsizes[k]
+            # use the native pytorch XLA APIs for the TPU.
+            cur_st = 0
+            for kernel_idx in range(weight.shape[0]):
+                cur_ed = cur_st + nbsizes[kernel_idx]
+                in_map = nbmaps[cur_st:cur_ed, 0].long()
+                out_map = nbmaps[cur_st:cur_ed, 1].long()
+                cur_st += nbsizes[kernel_idx]
+
+                if transposed:
+                    in_map, out_map = out_map, in_map
+
+                cur_feat = input[in_map]
+                cur_feat = torch.mm(cur_feat, weight[kernel_idx])
+                output[out_map] += cur_feat
 
         ctx.for_backwards = (input, weight, nbmaps, nbsizes, transposed)
         return output
 
     @staticmethod
     @custom_bwd
-    def backward(
-        ctx,
-        grad_output: torch.Tensor,
-    ) -> Tuple[Optional[torch.Tensor], ...]:
+    def backward(ctx, grad_output: torch.Tensor):
         input, weight, nbmaps, nbsizes, transposed = ctx.for_backwards
 
         grad_input = torch.zeros_like(input)
@@ -94,112 +88,118 @@ class ConvolutionFunction(Function):
 
         if grad_output.device.type == 'cuda':
             torchsparse.backend.convolution_backward_cuda(
-                input,
-                grad_input,
-                grad_output.contiguous(),
-                weight,
-                grad_weight,
-                nbmaps,
-                nbsizes.cpu(),
-                transposed,
-            )
+                input, grad_input, grad_output.contiguous(), weight,
+                grad_weight, nbmaps, nbsizes.cpu(), transposed)
         elif grad_output.device.type == 'cpu':
             torchsparse.backend.convolution_backward_cpu(
-                input,
-                grad_input,
-                grad_output.contiguous(),
-                weight,
-                grad_weight,
-                nbmaps,
-                nbsizes.cpu(),
-                transposed,
-            )
+                input, grad_input, grad_output.contiguous(), weight,
+                grad_weight, nbmaps, nbsizes.cpu(), transposed)
         else:
             raise NotImplementedError
-        return grad_input, grad_weight, None, None, None, None
+        return grad_input, grad_weight, None, None, None, None, None, None, \
+            None, None, None, None
 
 
-def conv3d(
-    input: SparseTensor,
-    weight: torch.Tensor,
-    kernel_size: Union[int, Tuple[int, ...]],
-    bias: Optional[torch.Tensor] = None,
-    stride: Union[int, Tuple[int, ...]] = 1,
-    dilation: Union[int, Tuple[int, ...]] = 1,
-    transposed: bool = False,
-) -> SparseTensor:
+def conv3d(input: SparseTensor,
+           weight: torch.Tensor,
+           kernel_size: Union[int, Tuple[int, ...]],
+           bias: Optional[torch.Tensor] = None,
+           stride: Union[int, Tuple[int, ...]] = 1,
+           dilation: Union[int, Tuple[int, ...]] = 1,
+           transposed: bool = False,
+           epsilon: float = 0.0,
+           mm_thresh: int = 0,
+           kmap_mode: str = 'hashmap',
+           conv_mode: str = 'default') -> SparseTensor:
+    feats, coords = input.feats, input.coords
+
     kernel_size = make_ntuple(kernel_size, ndim=3)
     stride = make_ntuple(stride, ndim=3)
     dilation = make_ntuple(dilation, ndim=3)
 
-    if (kernel_size == make_ntuple(1, ndim=3)
-            and stride == make_ntuple(1, ndim=3)
-            and dilation == make_ntuple(1, ndim=3)):
-        output_stride = input.stride
-        output_coords = input.coords
-        output_feats = input.feats.matmul(weight)
-    elif not transposed:
-        output_stride = tuple(input.stride[k] * stride[k] for k in range(3))
-
-        if output_stride in input.cmaps:
-            output_coords = input.cmaps[output_stride]
-        elif all(stride[k] == 1 for k in range(3)):
-            output_coords = input.coords
-        else:
-            output_coords = F.spdownsample(
-                input.coords,
-                stride,
-                kernel_size,
-                input.stride,
-            )
-
-        if (input.stride, kernel_size, stride, dilation) not in input.kmaps:
-            offsets = get_kernel_offsets(
-                kernel_size,
-                stride=input.stride,
-                dilation=dilation,
-                device=input.feats.device,
-            )
-
-            references = F.sphash(input.coords)
-            queries = F.sphash(output_coords, offsets)
-            results = F.sphashquery(queries, references)
-
-            nbsizes = torch.sum(results != -1, dim=1)
-            nbmaps = torch.nonzero(results != -1)
-
-            indices = nbmaps[:, 0] * results.size(1) + nbmaps[:, 1]
-            nbmaps[:, 0] = results.view(-1)[indices]
-
-            input.kmaps[(input.stride, kernel_size, stride, dilation)] = [
-                nbmaps, nbsizes, (input.coords.shape[0], output_coords.shape[0])
-            ]
-
-        output_feats = ConvolutionFunction.apply(
-            input.feats,
-            weight,
-            *input.kmaps[(input.stride, kernel_size, stride, dilation)],
-            transposed,
-        )
+    if conv_mode == 'default':
+        conv_mode_num = 0
+    elif conv_mode == 'fused_gs':
+        conv_mode_num = 1
+    elif conv_mode == 'fast':
+        conv_mode_num = 2
     else:
-        output_stride = tuple(input.stride[k] // stride[k] for k in range(3))
-        output_coords = input.cmaps[output_stride]
-        output_feats = ConvolutionFunction.apply(
-            input.feats,
-            weight,
-            *input.kmaps[(output_stride, kernel_size, stride, dilation)],
-            transposed,
-        )
+        raise NotImplementedError
 
-    if bias is not None:
-        output_feats += bias
+    if (kernel_size == (1, 1, 1) and stride == (1, 1, 1)
+            and dilation == (1, 1, 1)):
+        feats = feats.matmul(weight)
+        if bias is not None:
+            feats += bias
+        output = SparseTensor(coords=coords,
+                              feats=feats,
+                              stride=input.stride,
+                              buffer=input.buffer)
+    elif not transposed:
+        kmap = input.kmaps.get((input.stride, kernel_size, stride, dilation))
+        if kmap is None:
+            if any(s > 1 for s in stride):
+                # print('before', coords.shape)
+                kmap_out = F.build_kernel_map(coords, kernel_size, stride,
+                                              input.stride, kmap_mode)
+                if len(kmap_out) == 3:
+                    nbmaps, nbsizes, coords = kmap_out
+                    input_mask, output_mask = None, None
+                elif len(kmap_out) == 5:
+                    nbmaps, nbsizes, coords, input_mask, output_mask = kmap_out
+                else:
+                    raise NotImplementedError
+                # print('after', coords.shape)
+            else:
 
-    output = SparseTensor(
-        coords=output_coords,
-        feats=output_feats,
-        stride=output_stride,
-    )
+                kmap_out = F.build_kernel_map(coords, kernel_size, stride,
+                                              input.stride, kmap_mode)
+                if len(kmap_out) == 2:
+                    nbmaps, nbsizes = kmap_out
+                    input_mask, output_mask = None, None
+                elif len(kmap_out) == 4:
+                    nbmaps, nbsizes, input_mask, output_mask = kmap_out
+                else:
+                    raise NotImplementedError
+
+            # print(nbmaps.shape, nbsizes, nbmaps.max(0).values, nbmaps.min(0).values)
+            nbsizes = nbsizes.cpu()
+
+            kmap = [
+                nbmaps, nbsizes, (feats.shape[0], coords.shape[0]), input_mask,
+                output_mask
+            ]
+            input.kmaps[(input.stride, kernel_size, stride, dilation)] = kmap
+
+        # print(f"kmap {kmap}")
+        feats = ConvolutionFunction.apply(feats, weight, kmap[0], kmap[1],
+                                          input.buffer, kmap[2], kmap[3],
+                                          kmap[4], epsilon, mm_thresh,
+                                          conv_mode_num, transposed)
+        if bias is not None:
+            feats += bias
+        output = SparseTensor(
+            coords=coords,
+            feats=feats,
+            stride=tuple(input.stride[k] * stride[k] for k in range(3)),
+            buffer=input.buffer)
+    else:
+        tensor_stride = tuple(input.stride[k] // stride[k] for k in range(3))
+        # print(f"input.kmaps {input.kmaps}")
+        kmap = input.kmaps[(tensor_stride, kernel_size, stride, dilation)]
+        # print(f"kmap {kmap}")
+        feats = ConvolutionFunction.apply(feats, weight, kmap[0], kmap[1],
+                                          input.buffer, kmap[2], kmap[3],
+                                          kmap[4], epsilon, mm_thresh,
+                                          conv_mode_num, transposed)
+        if bias is not None:
+            feats += bias
+        output = SparseTensor(coords=input.cmaps[tensor_stride],
+                              feats=feats,
+                              stride=tensor_stride,
+                              buffer=input.buffer)
+
     output.cmaps = input.cmaps
-    output.cmaps.setdefault(output_stride, output_coords)
+    output.cmaps.setdefault(output.stride, output.coords)
     output.kmaps = input.kmaps
     return output
