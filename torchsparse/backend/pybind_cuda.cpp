@@ -10,8 +10,10 @@
 #include "hash/hash_cuda.h"
 #include "others/count_cpu.h"
 #include "others/count_cuda.h"
+#include "others/downsample_cuda.h"
 #include "others/query_cpu.h"
 #include "others/query_cuda.h"
+#include "others/sparsemapping_cuda.h"
 #include "voxelize/voxelize_cpu.h"
 #include "voxelize/voxelize_cuda.h"
 
@@ -34,6 +36,10 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("kernel_hash_cuda", &kernel_hash_cuda);
   m.def("hash_query_cpu", &hash_query_cpu);
   m.def("hash_query_cuda", &hash_query_cuda);
+  m.def("build_kernel_map_subm", &build_kernel_map_subm);
+  m.def("build_kernel_map_downsample", &build_kernel_map_downsample);
+  m.def("build_mask_from_kmap", &build_mask_from_kmap);
+  m.def("downsample_cuda", &downsample_cuda);
   m.def("count_cpu", &count_cpu);
   m.def("count_cuda", &count_cuda);
 }
