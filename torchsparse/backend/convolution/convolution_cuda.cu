@@ -81,10 +81,7 @@ __global__ void gather_all_kernel_pad_sep_with_mask(
   j = index % (c >> offset);
   if (i >= n) return;
   int4 tmps[1];
-  // tmps[0].x = tmps[0].y = tmps[0].z = tmps[0].w = 0;
   CONVERT_INT4(tmps) = CONVERT_INT4(in_feat[i * c + (j << offset)]);
-  // float verify = *(reinterpret_cast<float*>(tmps) + 3);
-  // printf("%f %f\n", verify, in_feat[i * c + (j << offset) + 3]);
   if (transpose) {
     for (int k = 0; k < kernel_volume; k++) {
       // if(precompute_mid && k == kernel_volume / 2) continue;
@@ -259,13 +256,26 @@ __global__ void scatter_all_kernel_pad_sep_with_mask_float(
 //                  cur_stride)
 // kernel: (k^3, c, o) for a 3D convolution of length k
 // neighbor_map: (a, 2) the hash table query results from out_coords to
-// in_coords
+//                      in_coords
 //                      where neighbor_map[:,0] is the index of the output
 //                      feature and neighbor_map[:,1] is the index of the input
 //                      feature
 // neighbor_offset: (k^3) count of active weights based on neighbor_map
 //                      with unused weights having 0 and neighbor_offset[k^3/2]
 //                      holding w[0,0].
+// epsilon: tolerance of redundant computation in adaptive matmul grouping
+//                      start a new group when the
+//                      redundant computation ratio > epsilon
+// mm_thresh: threshold of the maximum workload size within each group
+//                      perform bmm if the workload size smaller than mm_thresh
+//                      and perform mm otherwise
+// conv_mode: which conv backend to use by default
+//                      0: fallback to torchsparse 1.4 conv w/o optimizations
+//                      1: conv with fused locality-aware gather-scatter
+//                      2: conv with all latest optimizations, including
+//                         fused gather-scatter and matmul grouping. Kernel
+//                         reordering should be done in piror steps for
+//                         grouping to function properly
 void convolution_forward_cuda(at::Tensor in_feat, at::Tensor out_feat,
                               at::Tensor kernel, at::Tensor neighbor_map,
                               at::Tensor neighbor_offset, at::Tensor input_mask,
@@ -382,7 +392,6 @@ void group_strategy_generation(
   }
 
   // determine the cumulated buffer size for each offset
-
   int cur_cum_size = 0;
   for (int i = 0; i < groups.size(); i++) {
     for (int j = 0; j < groups[i].size(); j++) {
@@ -412,11 +421,7 @@ void convolution_forward_cuda_latest(
       torch::cumsum(neighbor_offset_gpu, 0).to(at::ScalarType::Int);
   at::Tensor neighbor_offset_cum =
       neighbor_offset_cum_gpu.to(neighbor_offset.device());
-  // at::Tensor neighbor_map_cpu = neighbor_map.to(neighbor_offset.device());
   at::Tensor cum_buffer_sizes = torch::zeros_like(neighbor_offset);
-
-  // int tile_size = 1024;
-  int tile_id;
 
   auto options =
       torch::TensorOptions().dtype(in_feat.dtype()).device(in_feat.device());
@@ -469,9 +474,6 @@ void convolution_forward_cuda_latest(
                           -1);
     }
   }
-  // std::cout << in_feat.size(0) << " " << in_feat.size(1) << " " <<
-  // out_feat.size(0) << " " << out_feat.size(1) << " " << kernel.size(0) << " "
-  // << kernel.size(1) << " " << kernel.size(2) << std::endl;
 
   int n_in_feats = in_feat.size(0);
   int n_in_channels = in_feat.size(1);
@@ -497,8 +499,6 @@ void convolution_forward_cuda_latest(
                      neighbor_offset.data_ptr<int>() + kernel_volume / 2 + 1,
                      neighbor_offset.data_ptr<int>() + kernel_volume));
     max_kmap_size = std::max(max_kmap_size, 1);
-    // (N, c) X (c, o) = (N, o)
-    // torch::mm_out(out_feat, in_feat, kernel[mid_kernel]);
   } else {
     max_kmap_size =
         *std::max_element(neighbor_offset.data_ptr<int>(),
@@ -562,7 +562,6 @@ void convolution_forward_cuda_latest(
   // mm_ops = 0, sep; mm_ops = 1, BMM
   int kernel_cnt = 0;
   for (int i = 0; i < groups.size(); i++) {
-    // case 0 and 1: no padding
     switch (mm_ops[i]) {
       case 0: {
         for (int j = 0; j < groups[i].size(); j++) {
@@ -703,6 +702,8 @@ void convolution_forward_cuda_fallback(at::Tensor in_feat, at::Tensor out_feat,
     in_buffer_size = std::max(in_buffer_size, 1);
 
     // (N, c) X (c, o) = (N, o)
+    // conv_mode == 2 indicates kernel has been reordered, in which case
+    // w[0,0] is placed at the end
     int mid_kmap_idx = conv_mode != 2 ? kernel_volume / 2 : kernel_volume - 1;
     torch::mm_out(out_feat, in_feat, kernel[mid_kmap_idx]);
   } else {

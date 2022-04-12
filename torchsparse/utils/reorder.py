@@ -14,12 +14,12 @@ def reorder_kernel(net):
                 ind = 0
                 while ind < kernel_volume - 1:
                     kernel_cont[ind] = child.kernel.data[ind // 2]
-                    kernel_cont[ind + 1] = child.kernel.data[kernel_volume - 1
-                                                             - ind // 2]
+                    kernel_cont[ind + 1] = \
+                        child.kernel.data[kernel_volume - 1 - ind // 2]
                     ind += 2
                 if kernel_volume % 2 == 1:
-                    kernel_cont[kernel_volume
-                                - 1] = child.kernel.data[kernel_volume // 2]
+                    kernel_cont[kernel_volume - 1] = \
+                        child.kernel.data[kernel_volume // 2]
 
                 child.kernel.data = kernel_cont
                 setattr(net, child_name, child)

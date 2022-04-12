@@ -1,5 +1,5 @@
 import math
-from typing import Tuple, Union
+from typing import Dict, Tuple, Union
 
 import numpy as np
 import torch
@@ -22,7 +22,7 @@ class Conv3d(nn.Module):
                  dilation: int = 1,
                  bias: bool = False,
                  transposed: bool = False,
-                 config=None) -> None:
+                 config: Dict = None) -> None:
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -31,12 +31,6 @@ class Conv3d(nn.Module):
         self.dilation = dilation
         self.transposed = transposed
 
-        # if config == None:
-        #     config = defaultdict(int)
-        #     if kernel_size == 3:
-        #         config = {'epsilon': 0.4, 'mm_thresh': 20000}
-        #     elif kernel_size == 2:
-        #         config = {'epsilon': 1.0, 'mm_thresh': 20000}
         if config is None:
             config = {}
         config['epsilon'] = config.get('epsilon', 0.0)

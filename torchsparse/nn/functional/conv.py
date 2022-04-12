@@ -139,7 +139,6 @@ def conv3d(input: SparseTensor,
         kmap = input.kmaps.get((input.stride, kernel_size, stride, dilation))
         if kmap is None:
             if any(s > 1 for s in stride):
-                # print('before', coords.shape)
                 kmap_out = F.build_kernel_map(coords, kernel_size, stride,
                                               input.stride, kmap_mode)
                 if len(kmap_out) == 3:
@@ -149,7 +148,6 @@ def conv3d(input: SparseTensor,
                     nbmaps, nbsizes, coords, input_mask, output_mask = kmap_out
                 else:
                     raise NotImplementedError
-                # print('after', coords.shape)
             else:
 
                 kmap_out = F.build_kernel_map(coords, kernel_size, stride,
@@ -162,7 +160,6 @@ def conv3d(input: SparseTensor,
                 else:
                     raise NotImplementedError
 
-            # print(nbmaps.shape, nbsizes, nbmaps.max(0).values, nbmaps.min(0).values)
             nbsizes = nbsizes.cpu()
 
             kmap = [
@@ -171,7 +168,6 @@ def conv3d(input: SparseTensor,
             ]
             input.kmaps[(input.stride, kernel_size, stride, dilation)] = kmap
 
-        # print(f"kmap {kmap}")
         feats = ConvolutionFunction.apply(feats, weight, kmap[0], kmap[1],
                                           input.buffer, kmap[2], kmap[3],
                                           kmap[4], epsilon, mm_thresh,
@@ -185,9 +181,7 @@ def conv3d(input: SparseTensor,
             buffer=input.buffer)
     else:
         tensor_stride = tuple(input.stride[k] // stride[k] for k in range(3))
-        # print(f"input.kmaps {input.kmaps}")
         kmap = input.kmaps[(tensor_stride, kernel_size, stride, dilation)]
-        # print(f"kmap {kmap}")
         feats = ConvolutionFunction.apply(feats, weight, kmap[0], kmap[1],
                                           input.buffer, kmap[2], kmap[3],
                                           kmap[4], epsilon, mm_thresh,

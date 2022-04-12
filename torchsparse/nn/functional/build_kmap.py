@@ -15,7 +15,6 @@ def build_kernel_map(_coords: torch.Tensor,
                      stride: Union[int, Tuple[int, ...]] = 2,
                      tensor_stride: Union[int, Tuple[int, ...]] = 1,
                      mode='hashmap') -> torch.Tensor:
-    # print(_coords.shape, kernel_size, stride, tensor_stride)
     if mode == 'grid':
         coords = _coords[:, [3, 0, 1, 2]]
         stride = make_ntuple(stride, ndim=3)

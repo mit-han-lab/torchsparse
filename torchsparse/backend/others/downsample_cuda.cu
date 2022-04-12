@@ -179,7 +179,6 @@ at::Tensor downsample_cuda(at::Tensor in_coords, at::Tensor coords_max,
       n_out_points.data_ptr<int>(), out_coords_transformed.data_ptr<long>());
 
   int n_out_points_scalar = (int)n_out_points.item<int>();
-  // std::cout << n_out_points_scalar << std::endl;
   out_coords_transformed = std::get<0>(at::_unique(
       at::slice(out_coords_transformed, 0, 0, n_out_points_scalar)));
 
@@ -188,7 +187,6 @@ at::Tensor downsample_cuda(at::Tensor in_coords, at::Tensor coords_max,
       torch::zeros({num_out_points, NDim}, torch::TensorOptions()
                                                .dtype(at::ScalarType::Int)
                                                .device(in_coords.device()));
-  // std::cout << num_out_points << std::endl;
 
   inverse_transform_coords_kernel<<<int(ceil((double)num_out_points / 256)),
                                     256>>>(
