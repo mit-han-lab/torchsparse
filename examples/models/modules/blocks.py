@@ -1,10 +1,10 @@
 from typing import Union
 
+import numpy as np
 from torch import nn
 
 from torchsparse import nn as spnn
 from torchsparse.tensor import SparseTensor
-from torchsparse.utils import make_ntuple
 
 __all__ = ['SparseConvBlock', 'SparseConvTransposeBlock', 'SparseResBlock']
 
@@ -17,8 +17,7 @@ class SparseConvBlock(nn.Sequential):
                  kernel_size: Union[int, list, tuple],
                  stride: Union[int, list, tuple] = 1,
                  dilation: int = 1) -> None:
-        super().__init__()
-        self.net = nn.Sequential(
+        super().__init__(
             spnn.Conv3d(in_channels,
                         out_channels,
                         kernel_size,
@@ -27,9 +26,6 @@ class SparseConvBlock(nn.Sequential):
             spnn.BatchNorm(out_channels),
             spnn.ReLU(True),
         )
-
-    def forward(self, x: SparseTensor):
-        return self.net(x)
 
 
 class SparseConvTransposeBlock(nn.Sequential):
@@ -40,8 +36,7 @@ class SparseConvTransposeBlock(nn.Sequential):
                  kernel_size: Union[int, list, tuple],
                  stride: Union[int, list, tuple] = 1,
                  dilation: int = 1) -> None:
-        super().__init__()
-        self.net = nn.Sequential(
+        super().__init__(
             spnn.Conv3d(in_channels,
                         out_channels,
                         kernel_size,
@@ -51,9 +46,6 @@ class SparseConvTransposeBlock(nn.Sequential):
             spnn.BatchNorm(out_channels),
             spnn.ReLU(True),
         )
-
-    def forward(self, x: SparseTensor):
-        return self.net(x)
 
 
 class SparseResBlock(nn.Module):
@@ -80,8 +72,7 @@ class SparseResBlock(nn.Module):
             spnn.BatchNorm(out_channels),
         )
 
-        if in_channels != out_channels or any(
-                x > 1 for x in make_ntuple(stride, ndim=3)):
+        if in_channels != out_channels or np.prod(stride) != 1:
             self.shortcut = nn.Sequential(
                 spnn.Conv3d(in_channels, out_channels, 1, stride=stride),
                 spnn.BatchNorm(out_channels),
