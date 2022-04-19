@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from models import SparseResNet
+from models import SparseResNet18
 
 from torchsparse import SparseTensor
 from torchsparse.utils.quantize import sparse_quantize
@@ -8,7 +8,7 @@ from torchsparse.utils.quantize import sparse_quantize
 if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-    model = SparseResNet(in_channels=4).to(device).eval()
+    model = SparseResNet18(in_channels=4).to(device).eval()
     print(model)
 
     # generate data

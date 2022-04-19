@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from models import SparseResUNet
+from models import SparseResUNet18
 
 from torchsparse import SparseTensor
 from torchsparse.utils.quantize import sparse_quantize
@@ -8,7 +8,7 @@ from torchsparse.utils.quantize import sparse_quantize
 if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-    model = SparseResUNet(cr=1.0).to(device).eval()
+    model = SparseResUNet18(width_multiplier=1.0).to(device).eval()
     print(model)
 
     # generate data
@@ -27,5 +27,5 @@ if __name__ == '__main__':
     # forward
     feats_dict = model(input)
     print(f"output (up4) feature shape {feats_dict['out'].feats.shape}")
-    print(f"downsample stage1 feature shape {feats_dict['stage1'].feats.shape}")
+    print(f"downsample stage1 feature shape {feats_dict['down1'].feats.shape}")
     print(f"upsample up1 feature shape {feats_dict['up1'].feats.shape}")

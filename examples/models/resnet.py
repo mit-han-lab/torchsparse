@@ -1,19 +1,28 @@
 import torch.nn as nn
-from models.modules.layers_3d import SparseConvBlock, SparseResBlock
+from models.modules.blocks import SparseConvBlock, SparseResBlock
 
-__all__ = ['SparseResNet']
+from torchsparse.tensor import SparseTensor
+
+__all__ = ['SparseResNet18']
 
 
-class SparseResNet(nn.Module):
+class SparseResNet18(nn.Module):
 
-    def __init__(self, in_channels: int = 4) -> None:
+    def __init__(self,
+                 in_channels: int = 4,
+                 channel_sizes: list = None,
+                 width_multiplier: float = 1.0) -> None:
+
         super().__init__()
 
-        cs = [16, 32, 64, 128]
+        cs = channel_sizes if channel_sizes is not None else [16, 32, 64, 128]
+        cs = [int(width_multiplier * x) for x in cs]
 
         self.stem = nn.Sequential(
             SparseConvBlock(in_channels, cs[0], 3, stride=1),
-            SparseResBlock(cs[0], cs[0], 3), SparseResBlock(cs[0], cs[0], 3))
+            SparseResBlock(cs[0], cs[0], 3),
+            SparseResBlock(cs[0], cs[0], 3),
+        )
         self.stage1 = nn.Sequential(
             SparseConvBlock(cs[0], cs[1], 3, stride=2),
             SparseResBlock(cs[1], cs[1], 3),
@@ -32,15 +41,7 @@ class SparseResNet(nn.Module):
 
         self.stage4 = SparseConvBlock(cs[3], cs[3], [1, 3, 1], stride=[1, 2, 1])
 
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        for m in self.modules():
-            if isinstance(m, nn.BatchNorm1d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-
-    def forward(self, x):
+    def forward(self, x: SparseTensor):
         feats = {}
 
         feats['stem'] = self.stem(x)
