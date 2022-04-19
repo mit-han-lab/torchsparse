@@ -1,9 +1,10 @@
 import torch.nn as nn
-from models.modules.blocks import (SparseConvBlock, SparseConvTransposeBlock,
-                                   SparseResBlock)
 
 import torchsparse
 import torchsparse.nn as spnn
+from torchsparse.backbones.modules import (SparseConvBlock,
+                                           SparseConvTransposeBlock,
+                                           SparseResBlock)
 from torchsparse.tensor import SparseTensor
 
 __all__ = ['SparseResUNet18']

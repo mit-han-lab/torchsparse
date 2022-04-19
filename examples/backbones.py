@@ -1,8 +1,8 @@
 import numpy as np
 import torch
-from models import SparseResNet18, SparseResUNet18
 
 from torchsparse import SparseTensor
+from torchsparse.backbones import SparseResNet18, SparseResUNet18
 from torchsparse.utils.quantize import sparse_quantize
 
 
