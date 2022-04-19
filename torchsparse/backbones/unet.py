@@ -1,3 +1,5 @@
+from typing import Dict, List, Optional
+
 import torch.nn as nn
 
 import torchsparse
@@ -14,7 +16,7 @@ class SparseResUNet18(nn.Module):
 
     def __init__(self,
                  in_channels: int = 4,
-                 channel_sizes: list = None,
+                 channel_sizes: Optional[List[int]] = None,
                  width_multiplier: float = 1.0):
         super().__init__()
 
@@ -32,7 +34,7 @@ class SparseResUNet18(nn.Module):
             spnn.ReLU(True),
         )
 
-        self.downs = []
+        self.downs = nn.ModuleList()
         for i in range(4):
             self.downs.append(
                 nn.Sequential(
@@ -52,9 +54,8 @@ class SparseResUNet18(nn.Module):
                                    stride=1,
                                    dilation=1),
                 ))
-        self.downs = nn.ModuleList(self.downs)
 
-        self.ups = []
+        self.ups = nn.ModuleList()
         for i in range(4):
             self.ups.append(
                 nn.ModuleList([
@@ -75,9 +76,8 @@ class SparseResUNet18(nn.Module):
                                        dilation=1),
                     )
                 ]))
-        self.ups = nn.ModuleList(self.ups)
 
-    def forward(self, x: SparseTensor):
+    def forward(self, x: SparseTensor) -> Dict[str, SparseTensor]:
         feats = {}
         down_keys = ['down1', 'down2', 'down3', 'down4']
         up_keys = ['up1', 'up2', 'up3', 'out']

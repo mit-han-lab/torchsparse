@@ -1,3 +1,5 @@
+from typing import Dict, List, Optional
+
 import torch.nn as nn
 
 from torchsparse.backbones.modules import SparseConvBlock, SparseResBlock
@@ -10,7 +12,7 @@ class SparseResNet18(nn.Module):
 
     def __init__(self,
                  in_channels: int = 4,
-                 channel_sizes: list = None,
+                 channel_sizes: Optional[List[int]] = None,
                  width_multiplier: float = 1.0) -> None:
 
         super().__init__()
@@ -41,7 +43,7 @@ class SparseResNet18(nn.Module):
 
         self.stage4 = SparseConvBlock(cs[3], cs[3], [1, 3, 1], stride=[1, 2, 1])
 
-    def forward(self, x: SparseTensor):
+    def forward(self, x: SparseTensor) -> Dict[str, SparseTensor]:
         feats = {}
 
         feats['stem'] = self.stem(x)

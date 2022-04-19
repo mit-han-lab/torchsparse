@@ -1,4 +1,4 @@
-from typing import Union
+from typing import List, Tuple, Union
 
 import numpy as np
 from torch import nn
@@ -14,8 +14,8 @@ class SparseConvBlock(nn.Sequential):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: Union[int, list, tuple],
-                 stride: Union[int, list, tuple] = 1,
+                 kernel_size: Union[int, List[int], Tuple[int, ...]],
+                 stride: Union[int, List[int], Tuple[int, ...]] = 1,
                  dilation: int = 1) -> None:
         super().__init__(
             spnn.Conv3d(in_channels,
@@ -33,8 +33,8 @@ class SparseConvTransposeBlock(nn.Sequential):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: Union[int, list, tuple],
-                 stride: Union[int, list, tuple] = 1,
+                 kernel_size: Union[int, List[int], Tuple[int, ...]],
+                 stride: Union[int, List[int], Tuple[int, ...]] = 1,
                  dilation: int = 1) -> None:
         super().__init__(
             spnn.Conv3d(in_channels,
@@ -53,8 +53,8 @@ class SparseResBlock(nn.Module):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: Union[int, list, tuple],
-                 stride: Union[int, list, tuple] = 1,
+                 kernel_size: Union[int, List[int], Tuple[int, ...]],
+                 stride: Union[int, List[int], Tuple[int, ...]] = 1,
                  dilation: int = 1) -> None:
         super().__init__()
         self.main = nn.Sequential(
@@ -82,6 +82,6 @@ class SparseResBlock(nn.Module):
 
         self.relu = spnn.ReLU(True)
 
-    def forward(self, x: SparseTensor):
+    def forward(self, x: SparseTensor) -> SparseTensor:
         x = self.relu(self.main(x) + self.shortcut(x))
         return x
