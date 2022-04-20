@@ -34,9 +34,9 @@ class SparseResUNet18(nn.Module):
             spnn.ReLU(True),
         )
 
-        self.downs = nn.ModuleList()
+        self.encoders = nn.ModuleList()
         for i in range(4):
-            self.downs.append(
+            self.encoders.append(
                 nn.Sequential(
                     SparseConvBlock(cs[i],
                                     cs[i],
@@ -55,52 +55,58 @@ class SparseResUNet18(nn.Module):
                                    dilation=1),
                 ))
 
-        self.ups = nn.ModuleList()
+        self.decoders = nn.ModuleList()
         for i in range(4):
-            self.ups.append(
-                nn.ModuleList([
-                    SparseConvTransposeBlock(cs[i + 4],
-                                             cs[i + 5],
-                                             kernel_size=2,
-                                             stride=2),
-                    nn.Sequential(
-                        SparseResBlock(cs[i + 5] + cs[3 - i],
-                                       cs[i + 5],
-                                       kernel_size=3,
-                                       stride=1,
-                                       dilation=1),
-                        SparseResBlock(cs[i + 5],
-                                       cs[i + 5],
-                                       kernel_size=3,
-                                       stride=1,
-                                       dilation=1),
-                    )
-                ]))
+            self.decoders.append(
+                nn.ModuleDict({
+                    'upsample':
+                        SparseConvTransposeBlock(cs[i + 4],
+                                                 cs[i + 5],
+                                                 kernel_size=2,
+                                                 stride=2),
+                    'fuse':
+                        nn.Sequential(
+                            SparseResBlock(cs[i + 5] + cs[3 - i],
+                                           cs[i + 5],
+                                           kernel_size=3,
+                                           stride=1,
+                                           dilation=1),
+                            SparseResBlock(cs[i + 5],
+                                           cs[i + 5],
+                                           kernel_size=3,
+                                           stride=1,
+                                           dilation=1),
+                        )
+                }))
 
     def forward(self, x: SparseTensor) -> Dict[str, SparseTensor]:
-        feats = {}
-        down_keys = ['down1', 'down2', 'down3', 'down4']
-        up_keys = ['up1', 'up2', 'up3', 'out']
 
-        feats['stem'] = self.stem(x)
+        def dfs(
+            x: SparseTensor,
+            encoders: nn.ModuleList,
+            decoders: nn.ModuleList,
+        ) -> List[SparseTensor]:
+            if not encoders and not decoders:
+                return [x]
 
-        for i in range(4):
-            if i == 0:
-                feats[down_keys[i]] = self.downs[i](feats['stem'])
-            else:
-                feats[down_keys[i]] = self.downs[i](feats[down_keys[i - 1]])
+            # downsample
+            xd = encoders[0](x)
 
-        for i in range(4):
-            if i == 0:
-                x = self.ups[i][0](feats[down_keys[-1]])
-            else:
-                x = self.ups[i][0](feats[up_keys[i - 1]])
+            # inner recursion
+            outputs = dfs(xd, encoders[1:], decoders[:-1])
+            yd = outputs[-1]
 
-            if i == 3:
-                x = torchsparse.cat([x, feats['stem']])
-            else:
-                x = torchsparse.cat([x, feats[down_keys[2 - i]]])
+            # upsample and fuse
+            u = decoders[-1]['upsample'](yd)
+            y = decoders[-1]['fuse'](torchsparse.cat([u, x]))
 
-            feats[up_keys[i]] = self.ups[i][1](x)
+            return [x] + outputs + [y]
 
-        return feats
+        output_dict = {}
+        output_dict['stem'] = x = self.stem(x)
+        outputs = dfs(x, self.encoders, self.decoders)
+        for k, name in enumerate(
+            ['down1', 'down2', 'down3', 'down4', 'up1', 'up2', 'up3', 'out'],
+                1):
+            output_dict[name] = outputs[k]
+        return output_dict
