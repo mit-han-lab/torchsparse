@@ -23,14 +23,14 @@ class SparseResUNet(nn.Module):
         width_multiplier: float = 1.0,
     ) -> None:
         super().__init__()
-        self.in_channels = in_channels
         self.stem_channels = stem_channels
         self.encoder_channels = encoder_channels
         self.decoder_channels = decoder_channels
+        self.in_channels = in_channels
         self.width_multiplier = width_multiplier
 
         num_channels = [stem_channels] + encoder_channels + decoder_channels
-        num_channels = [int(width_multiplier * x) for x in num_channels]
+        num_channels = [int(width_multiplier * nc) for nc in num_channels]
 
         self.stem = nn.Sequential(
             spnn.Conv3d(in_channels, num_channels[0], 3),
@@ -40,6 +40,10 @@ class SparseResUNet(nn.Module):
             spnn.BatchNorm(num_channels[0]),
             spnn.ReLU(True),
         )
+
+        # TODO(Zhijian): the current implementation of encoder and decoder
+        # is hard-coded for 4 encoder stages and 4 decoder stages. We should
+        # work on a more generic implementation in the future.
 
         self.encoders = nn.ModuleList()
         for k in range(4):
@@ -63,7 +67,7 @@ class SparseResUNet(nn.Module):
                         SparseConvTransposeBlock(
                             num_channels[k + 4],
                             num_channels[k + 5],
-                            kernel_size=2,
+                            2,
                             stride=2,
                         ),
                     'fuse':
@@ -71,12 +75,12 @@ class SparseResUNet(nn.Module):
                             SparseResBlock(
                                 num_channels[k + 5] + num_channels[3 - k],
                                 num_channels[k + 5],
-                                kernel_size=3,
+                                3,
                             ),
                             SparseResBlock(
                                 num_channels[k + 5],
                                 num_channels[k + 5],
-                                kernel_size=3,
+                                3,
                             ),
                         )
                 }))

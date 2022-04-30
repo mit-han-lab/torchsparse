@@ -3,8 +3,8 @@ from typing import List, Tuple, Union
 import numpy as np
 from torch import nn
 
+from torchsparse import SparseTensor
 from torchsparse import nn as spnn
-from torchsparse.tensor import SparseTensor
 
 __all__ = ['SparseConvBlock', 'SparseConvTransposeBlock', 'SparseResBlock']
 
