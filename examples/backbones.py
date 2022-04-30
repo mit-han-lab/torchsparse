@@ -14,7 +14,7 @@ def main() -> None:
     for backbone in [SparseResNet21D, SparseResUNet42]:
         print(f'{backbone.__name__}:')
         model: nn.Module = backbone(in_channels=4, width_multiplier=1.0)
-        model.to(device).eval()
+        model = model.to(device).eval()
 
         # generate data
         input_size, voxel_size = 10000, 0.2
