@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from torchsparse import SparseTensor
-from torchsparse.backbones import SparseResUNet18, sparseresnet18
+from torchsparse.backbones import SparseResNet21D, SparseResUNet42
 from torchsparse.utils.quantize import sparse_quantize
 
 
@@ -10,9 +10,10 @@ from torchsparse.utils.quantize import sparse_quantize
 def main():
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-    for backbone in [sparseresnet18, SparseResUNet18]:
+    for backbone in [SparseResNet21D, SparseResUNet42]:
         print(f'Running model {backbone.__name__}')
         model = backbone(in_channels=4, width_multiplier=1.0).to(device).eval()
+        print(model)
 
         # generate data
         input_size, voxel_size = 10000, 0.2
@@ -28,11 +29,11 @@ def main():
         input = SparseTensor(coords=coords, feats=feats).to(device)
 
         # forward
-        feats_dict = model(input)
+        outputs = model(input)
 
         # print feature shapes
-        for key in feats_dict:
-            print(f'{key} feature shape {feats_dict[key].feats.shape}')
+        for k, output in enumerate(outputs):
+            print(f'output[{k}] feature shape {output.feats.shape}')
 
 
 if __name__ == '__main__':

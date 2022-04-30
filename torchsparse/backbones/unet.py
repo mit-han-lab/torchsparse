@@ -1,112 +1,118 @@
-from typing import Dict, List, Optional
+from typing import List
 
-import torch.nn as nn
+from torch import nn
 
 import torchsparse
-import torchsparse.nn as spnn
-from torchsparse.backbones.modules import (SparseConvBlock,
-                                           SparseConvTransposeBlock,
-                                           SparseResBlock)
-from torchsparse.tensor import SparseTensor
+from torchsparse import SparseTensor
+from torchsparse import nn as spnn
 
-__all__ = ['SparseResUNet18']
+from .modules import SparseConvBlock, SparseConvTransposeBlock, SparseResBlock
+
+__all__ = ['SparseResUNet42']
 
 
-class SparseResUNet18(nn.Module):
+class SparseResUNet(nn.Module):
 
-    def __init__(self,
-                 in_channels: int = 4,
-                 channel_sizes: Optional[List[int]] = None,
-                 width_multiplier: float = 1.0):
+    def __init__(
+        self,
+        stem_channels: int,
+        encoder_channels: List[int],
+        decoder_channels: List[int],
+        *,
+        in_channels: int = 4,
+        width_multiplier: float = 1.0,
+    ) -> None:
         super().__init__()
+        self.in_channels = in_channels
+        self.stem_channels = stem_channels
+        self.encoder_channels = encoder_channels
+        self.decoder_channels = decoder_channels
+        self.width_multiplier = width_multiplier
 
-        cs = channel_sizes if channel_sizes is not None else [
-            32, 32, 64, 128, 256, 256, 128, 96, 96
-        ]
-        cs = [int(width_multiplier * x) for x in cs]
+        num_channels = [stem_channels] + encoder_channels + decoder_channels
+        num_channels = [int(width_multiplier * x) for x in num_channels]
 
         self.stem = nn.Sequential(
-            spnn.Conv3d(in_channels, cs[0], kernel_size=3, stride=1),
-            spnn.BatchNorm(cs[0]),
+            spnn.Conv3d(in_channels, num_channels[0], 3),
+            spnn.BatchNorm(num_channels[0]),
             spnn.ReLU(True),
-            spnn.Conv3d(cs[0], cs[0], kernel_size=3, stride=1),
-            spnn.BatchNorm(cs[0]),
+            spnn.Conv3d(num_channels[0], num_channels[0], 3),
+            spnn.BatchNorm(num_channels[0]),
             spnn.ReLU(True),
         )
 
         self.encoders = nn.ModuleList()
-        for i in range(4):
+        for k in range(4):
             self.encoders.append(
                 nn.Sequential(
-                    SparseConvBlock(cs[i],
-                                    cs[i],
-                                    kernel_size=2,
-                                    stride=2,
-                                    dilation=1),
-                    SparseResBlock(cs[i],
-                                   cs[i + 1],
-                                   kernel_size=3,
-                                   stride=1,
-                                   dilation=1),
-                    SparseResBlock(cs[i + 1],
-                                   cs[i + 1],
-                                   kernel_size=3,
-                                   stride=1,
-                                   dilation=1),
+                    SparseConvBlock(
+                        num_channels[k],
+                        num_channels[k],
+                        2,
+                        stride=2,
+                    ),
+                    SparseResBlock(num_channels[k], num_channels[k + 1], 3),
+                    SparseResBlock(num_channels[k + 1], num_channels[k + 1], 3),
                 ))
 
         self.decoders = nn.ModuleList()
-        for i in range(4):
+        for k in range(4):
             self.decoders.append(
                 nn.ModuleDict({
                     'upsample':
-                        SparseConvTransposeBlock(cs[i + 4],
-                                                 cs[i + 5],
-                                                 kernel_size=2,
-                                                 stride=2),
+                        SparseConvTransposeBlock(
+                            num_channels[k + 4],
+                            num_channels[k + 5],
+                            kernel_size=2,
+                            stride=2,
+                        ),
                     'fuse':
                         nn.Sequential(
-                            SparseResBlock(cs[i + 5] + cs[3 - i],
-                                           cs[i + 5],
-                                           kernel_size=3,
-                                           stride=1,
-                                           dilation=1),
-                            SparseResBlock(cs[i + 5],
-                                           cs[i + 5],
-                                           kernel_size=3,
-                                           stride=1,
-                                           dilation=1),
+                            SparseResBlock(
+                                num_channels[k + 5] + num_channels[3 - k],
+                                num_channels[k + 5],
+                                kernel_size=3,
+                            ),
+                            SparseResBlock(
+                                num_channels[k + 5],
+                                num_channels[k + 5],
+                                kernel_size=3,
+                            ),
                         )
                 }))
 
-    def forward(self, x: SparseTensor) -> Dict[str, SparseTensor]:
+    def _unet_forward(
+        self,
+        x: SparseTensor,
+        encoders: nn.ModuleList,
+        decoders: nn.ModuleList,
+    ) -> List[SparseTensor]:
+        if not encoders and not decoders:
+            return [x]
 
-        def dfs(
-            x: SparseTensor,
-            encoders: nn.ModuleList,
-            decoders: nn.ModuleList,
-        ) -> List[SparseTensor]:
-            if not encoders and not decoders:
-                return [x]
+        # downsample
+        xd = encoders[0](x)
 
-            # downsample
-            xd = encoders[0](x)
+        # inner recursion
+        outputs = self._unet_forward(xd, encoders[1:], decoders[:-1])
+        yd = outputs[-1]
 
-            # inner recursion
-            outputs = dfs(xd, encoders[1:], decoders[:-1])
-            yd = outputs[-1]
+        # upsample and fuse
+        u = decoders[-1]['upsample'](yd)
+        y = decoders[-1]['fuse'](torchsparse.cat([u, x]))
 
-            # upsample and fuse
-            u = decoders[-1]['upsample'](yd)
-            y = decoders[-1]['fuse'](torchsparse.cat([u, x]))
+        return [x] + outputs + [y]
 
-            return [x] + outputs + [y]
+    def forward(self, x: SparseTensor) -> List[SparseTensor]:
+        return self._unet_forward(self.stem(x), self.encoders, self.decoders)
 
-        output_dict = {}
-        output_dict['stem'] = x = self.stem(x)
-        outputs = dfs(x, self.encoders, self.decoders)
-        for k, name in enumerate(
-            ['down1', 'down2', 'down3', 'down4', 'up1', 'up2', 'up3', 'out'],
-                1):
-            output_dict[name] = outputs[k]
-        return output_dict
+
+class SparseResUNet42(SparseResUNet):
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(
+            stem_channels=32,
+            encoder_channels=[32, 64, 128, 256],
+            decoder_channels=[256, 128, 96, 96],
+            **kwargs,
+        )
