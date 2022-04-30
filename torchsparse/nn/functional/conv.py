@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 from torch.autograd import Function
@@ -122,9 +122,9 @@ class ConvolutionFunction(Function):
 def conv3d(
     input: SparseTensor,
     weight: torch.Tensor,
-    kernel_size: Union[int, Tuple[int, ...]],
+    kernel_size: Union[int, List[int], Tuple[int, ...]],
     bias: Optional[torch.Tensor] = None,
-    stride: Union[int, Tuple[int, ...]] = 1,
+    stride: Union[int, List[int], Tuple[int, ...]] = 1,
     dilation: Union[int, Tuple[int, ...]] = 1,
     transposed: bool = False,
 ) -> SparseTensor:
