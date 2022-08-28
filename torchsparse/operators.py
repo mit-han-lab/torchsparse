@@ -14,5 +14,4 @@ def cat(inputs: List[SparseTensor]) -> SparseTensor:
                           stride=inputs[0].stride)
     output.cmaps = inputs[0].cmaps
     output.kmaps = inputs[0].kmaps
-    output.buffer = inputs[0].buffer
     return output

@@ -9,14 +9,14 @@ __all__ = ['SparseTensor', 'PointTensor']
 
 class SparseTensor:
 
-    def __init__(self,
-                 feats: torch.Tensor,
-                 coords: torch.Tensor,
-                 stride: Union[int, Tuple[int, ...]] = 1,
-                 buffer: torch.Tensor = None) -> None:
+    def __init__(
+        self,
+        feats: torch.Tensor,
+        coords: torch.Tensor,
+        stride: Union[int, Tuple[int, ...]] = 1,
+    ) -> None:
         self.feats = feats
         self.coords = coords
-        self.buffer = buffer if buffer is not None else torch.Tensor()
         self.stride = make_ntuple(stride, ndim=3)
         self.cmaps: Dict[Tuple[int, ...], torch.Tensor] = {}
         self.kmaps: Dict[Tuple[Any, ...], Any] = {}
@@ -55,6 +55,10 @@ class SparseTensor:
         self.feats = self.feats.cuda()
         return self
 
+    def half(self):
+        self.feats = self.feats.half()
+        return self
+
     def detach(self):
         self.coords = self.coords.detach()
         self.feats = self.feats.detach()
@@ -65,17 +69,10 @@ class SparseTensor:
         self.feats = self.feats.to(device, non_blocking=non_blocking)
         return self
 
-    def build_buffer(self, buffer_size: int, buffer_type: torch.dtype):
-        self.buffer = torch.zeros(buffer_size,
-                                  dtype=buffer_type,
-                                  device=self.feats.device,
-                                  requires_grad=False)
-
     def __add__(self, other):
         output = SparseTensor(coords=self.coords,
                               feats=self.feats + other.feats,
-                              stride=self.stride,
-                              buffer=self.buffer)
+                              stride=self.stride)
         output.cmaps = self.cmaps
         output.kmaps = self.kmaps
         return output

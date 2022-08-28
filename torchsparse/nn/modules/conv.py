@@ -1,10 +1,12 @@
 import math
+from functools import cached_property
 from typing import Dict, Tuple, Union
 
 import numpy as np
 import torch
 from torch import nn
 
+import torchsparse
 from torchsparse import SparseTensor
 from torchsparse.nn import functional as F
 from torchsparse.utils import make_ntuple
@@ -36,7 +38,6 @@ class Conv3d(nn.Module):
         config['epsilon'] = config.get('epsilon', 0.0)
         config['mm_thresh'] = config.get('mm_thresh', 0)
         config['kmap_mode'] = config.get('kmap_mode', 'hashmap')
-        config['conv_mode'] = config.get('conv_mode', 'default')
         self.config = config
 
         self.kernel_volume = int(np.prod(self.kernel_size))
@@ -71,15 +72,40 @@ class Conv3d(nn.Module):
         if self.bias is not None:
             self.bias.data.uniform_(-std, std)
 
+    @cached_property
+    def _reordered_kernel(self) -> nn.Parameter:
+        kernel_data = torch.zeros_like(self.kernel.data)
+        ind = 0
+        while ind < self.kernel_volume - 1:
+            kernel_data[ind] = self.kernel.data[ind // 2].clone()
+            kernel_data[ind + 1] = \
+                self.kernel.data[self.kernel_volume - 1 - ind // 2].clone()
+            ind += 2
+        if self.kernel_volume % 2 == 1:
+            kernel_data[self.kernel_volume - 1] = \
+                self.kernel.data[self.kernel_volume // 2].clone()
+        return nn.Parameter(kernel_data, requires_grad=False)
+
     def forward(self, input: SparseTensor) -> SparseTensor:
+        kernel = self.kernel
+        epsilon, mm_thresh = self.config['epsilon'], self.config['mm_thresh']
+        if torchsparse.backends.benchmark:  # type: ignore
+            if self.training:
+                print('Warning: it is not recommended to enable '
+                      + 'torchsparse.backends.benchmark during the training.')
+                epsilon, mm_thresh = 0.0, 0
+            elif (self.config['epsilon'] != 0.0
+                    or self.config['mm_thresh'] != 0) and \
+                    len(kernel.data.shape) == 3:
+                kernel = self._reordered_kernel
+
         return F.conv3d(input,
-                        self.kernel,
+                        kernel,
                         kernel_size=self.kernel_size,
                         bias=self.bias,
                         stride=self.stride,
                         dilation=self.dilation,
                         transposed=self.transposed,
-                        epsilon=self.config['epsilon'],
-                        mm_thresh=self.config['mm_thresh'],
-                        kmap_mode=self.config['kmap_mode'],
-                        conv_mode=self.config['conv_mode'])
+                        epsilon=epsilon,
+                        mm_thresh=mm_thresh,
+                        kmap_mode=self.config['kmap_mode'])

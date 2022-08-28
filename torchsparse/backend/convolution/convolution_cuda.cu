@@ -276,37 +276,37 @@ __global__ void scatter_all_kernel_pad_sep_with_mask_float(
 //                         fused gather-scatter and matmul grouping. Kernel
 //                         reordering should be done in piror steps for
 //                         grouping to function properly
-void convolution_forward_cuda(at::Tensor in_feat, at::Tensor out_feat,
-                              at::Tensor kernel, at::Tensor neighbor_map,
-                              at::Tensor neighbor_offset, at::Tensor input_mask,
-                              at::Tensor output_mask, const float epsilon,
-                              const int mm_thresh, const int conv_mode,
-                              const bool transpose, at::Tensor global_buffer) {
+at::Tensor convolution_forward_cuda(
+    at::Tensor in_feat, at::Tensor kernel, at::Tensor neighbor_map,
+    at::Tensor neighbor_offset, at::Tensor input_mask, at::Tensor output_mask,
+    const int output_size, const float epsilon, const int mm_thresh,
+    const int conv_mode, const bool transpose, at::Tensor global_buffer) {
   int buffer_size = (int)torch::sum(neighbor_offset).item<int>();
   // be careful about the fallback setting
 
   // [!!!] NOTE: be careful, current buffer_size calculation is wrong, it does
   // not take into consideration padding!
-
   // if(1){
   if (conv_mode == 0) {
-    convolution_forward_cuda_fallback(in_feat, out_feat, kernel, neighbor_map,
-                                      conv_mode, neighbor_offset, transpose);
-  } else if (buffer_size * (in_feat.size(1) + out_feat.size(1)) >
+    return convolution_forward_cuda_fallback(in_feat, kernel, neighbor_map,
+                                             output_size, conv_mode,
+                                             neighbor_offset, transpose);
+  } else if (buffer_size * (in_feat.size(1) + kernel.size(-1)) >
                  global_buffer.size(0) &&
              !in_feat.requires_grad()) {
     // std::cout << "fallback: " << buffer_size * (in_feat.size(1) +
     // out_feat.size(1)) << " " << global_buffer.size(0) << std::endl;
     //  global buffer not large enough, fall back
-    convolution_forward_cuda_fallback(in_feat, out_feat, kernel, neighbor_map,
-                                      conv_mode, neighbor_offset, transpose);
+    return convolution_forward_cuda_fallback(in_feat, kernel, neighbor_map,
+                                             output_size, conv_mode,
+                                             neighbor_offset, transpose);
   } else {
     // std::cout << "not fallback: " << buffer_size * (in_feat.size(1) +
     // out_feat.size(1)) << " " << global_buffer.size(0) << std::endl;
     //  global buffer large enough, do all gather / all scatter
-    convolution_forward_cuda_latest(
-        in_feat, out_feat, kernel, neighbor_map, neighbor_offset, input_mask,
-        output_mask, epsilon, mm_thresh, conv_mode, transpose, global_buffer);
+    return convolution_forward_cuda_latest(
+        in_feat, kernel, neighbor_map, neighbor_offset, input_mask, output_mask,
+        output_size, epsilon, mm_thresh, conv_mode, transpose, global_buffer);
   }
 }
 
@@ -407,10 +407,10 @@ void group_strategy_generation(
   }
 }
 
-void convolution_forward_cuda_latest(
-    at::Tensor in_feat, at::Tensor out_feat, at::Tensor _kernel,
-    at::Tensor neighbor_map, at::Tensor neighbor_offset, at::Tensor input_mask,
-    at::Tensor output_mask, const float epsilon, const int mm_thresh,
+at::Tensor convolution_forward_cuda_latest(
+    at::Tensor in_feat, at::Tensor _kernel, at::Tensor neighbor_map,
+    at::Tensor neighbor_offset, at::Tensor input_mask, at::Tensor output_mask,
+    const int output_size, const float epsilon, const int mm_thresh,
     const int conv_mode, const bool transpose, at::Tensor global_buffer) {
   if (in_feat.size(1) != _kernel.size(1)) {
     throw std::invalid_argument("Input feature size and kernel size mismatch");
@@ -426,9 +426,14 @@ void convolution_forward_cuda_latest(
   auto options =
       torch::TensorOptions().dtype(in_feat.dtype()).device(in_feat.device());
   bool is_half = in_feat.scalar_type() == at::ScalarType::Half;
+  at::Tensor out_feat = torch::zeros({output_size, _kernel.size(-1)}, options);
 
   // pad num channels to an even number
   at::Tensor kernel = _kernel.clone();
+
+  int n_in_channels_original = in_feat.size(1);
+  int n_out_channels_original = out_feat.size(1);
+
   if (is_half) {
     if (in_feat.size(1) % 8 != 0) {
       in_feat = torch::cat(
@@ -443,8 +448,9 @@ void convolution_forward_cuda_latest(
     }
     if (out_feat.size(1) % 8 != 0) {
       out_feat = torch::cat(
-          {out_feat, torch::zeros({out_feat.size(0), 8 - (in_feat.size(1) % 8)},
-                                  options)},
+          {out_feat,
+           torch::zeros({out_feat.size(0), 8 - (out_feat.size(1) % 8)},
+                        options)},
           -1);
       kernel = torch::cat({kernel, torch::zeros({kernel.size(0), kernel.size(1),
                                                  8 - (kernel.size(2) % 8)},
@@ -465,8 +471,9 @@ void convolution_forward_cuda_latest(
     }
     if (out_feat.size(1) % 4 != 0) {
       out_feat = torch::cat(
-          {out_feat, torch::zeros({out_feat.size(0), 4 - (in_feat.size(1) % 4)},
-                                  options)},
+          {out_feat,
+           torch::zeros({out_feat.size(0), 4 - (out_feat.size(1) % 4)},
+                        options)},
           -1);
       kernel = torch::cat({kernel, torch::zeros({kernel.size(0), kernel.size(1),
                                                  4 - (kernel.size(2) % 4)},
@@ -661,30 +668,53 @@ void convolution_forward_cuda_latest(
         cum_buffer_sizes_gpu.data_ptr<int>(), input_mask.data_ptr<int>(),
         output_mask.data_ptr<int>(), transpose, precompute_mid);
   }
+
   if (precompute_mid)
     at::addmm_out(out_feat, out_feat, in_feat, kernel[mid_kernel]);
+
+  if (n_out_channels != n_out_channels_original) {
+    out_feat = at::slice(out_feat, 1, 0, n_out_channels_original).contiguous();
+  }
+  return out_feat;
 }
 
-void convolution_forward_cuda_fallback(at::Tensor in_feat, at::Tensor out_feat,
-                                       at::Tensor kernel,
-                                       at::Tensor neighbor_map,
-                                       const int conv_mode,
-                                       at::Tensor neighbor_offset,
-                                       const bool transpose) {
+at::Tensor convolution_forward_cuda_fallback(
+    at::Tensor in_feat, at::Tensor kernel, at::Tensor neighbor_map,
+    const int output_size, const int conv_mode, at::Tensor neighbor_offset,
+    const bool transpose) {
   if (in_feat.size(1) != kernel.size(1)) {
     throw std::invalid_argument("Input feature size and kernel size mismatch");
   }
-
   bool is_half = in_feat.scalar_type() == at::ScalarType::Half;
+  auto options =
+      torch::TensorOptions().dtype(in_feat.dtype()).device(in_feat.device());
+  at::Tensor out_feat = torch::zeros({output_size, kernel.size(-1)}, options);
+
+  // need to avoid misaligned memory access
+  bool padded = false;
+  if (is_half) {
+    if (in_feat.size(1) % 2 != 0) {
+      in_feat = torch::cat(
+          {in_feat, torch::zeros({in_feat.size(0), 1}, options)}, -1);
+      kernel = torch::cat(
+          {kernel, torch::zeros({kernel.size(0), 1, kernel.size(2)}, options)},
+          1);
+    }
+    if (out_feat.size(1) % 2 != 0) {
+      out_feat = torch::cat(
+          {out_feat, torch::zeros({out_feat.size(0), 1}, options)}, -1);
+      kernel = torch::cat(
+          {kernel, torch::zeros({kernel.size(0), kernel.size(1), 1}, options)},
+          -1);
+      padded = true;
+    }
+  }
 
   int n_in_feats = in_feat.size(0);
   int n_in_channels = in_feat.size(1);
   int n_out_feats = out_feat.size(0);
   int n_out_channels = out_feat.size(1);
-  ;
-
   int kernel_volume = kernel.size(0);
-
   // memory optimization
   bool precompute_mid = false;
   int mid_kernel = kernel_volume / 2;
@@ -700,7 +730,6 @@ void convolution_forward_cuda_fallback(at::Tensor in_feat, at::Tensor out_feat,
         *std::max_element(neighbor_offset.data_ptr<int>() + mid_kernel + 1,
                           neighbor_offset.data_ptr<int>() + kernel_volume));
     in_buffer_size = std::max(in_buffer_size, 1);
-
     // (N, c) X (c, o) = (N, o)
     // conv_mode == 2 indicates kernel has been reordered, in which case
     // w[0,0] is placed at the end
@@ -711,9 +740,6 @@ void convolution_forward_cuda_fallback(at::Tensor in_feat, at::Tensor out_feat,
         *std::max_element(neighbor_offset.data_ptr<int>(),
                           neighbor_offset.data_ptr<int>() + kernel_volume);
   }
-
-  auto options =
-      torch::TensorOptions().dtype(in_feat.dtype()).device(in_feat.device());
   auto in_buffer = torch::zeros({in_buffer_size, n_in_channels}, options);
   auto out_buffer = torch::zeros({in_buffer_size, n_out_channels}, options);
   int cur_offset = 0;
@@ -724,13 +750,11 @@ void convolution_forward_cuda_fallback(at::Tensor in_feat, at::Tensor out_feat,
     if (n_active_feats == 0) {
       continue;
     }
-
     // if w[0,0] was precomputed above, skip it
     if ((i == mid_kernel) && precompute_mid) {
       cur_offset += 2 * n_active_feats;
       continue;
     }
-
     // in_buffer_activated (i, c) holds the dense input features from gather
     // for i = n_active_feats (# of features in the activated kernel from
     // neighbor_offset) out_buffer_activated (i, o) holds the dense output
@@ -752,7 +776,6 @@ void convolution_forward_cuda_fallback(at::Tensor in_feat, at::Tensor out_feat,
           torch::from_blob(in_buffer.data_ptr<float>(),
                            {n_active_feats, n_in_channels}, options);
     }
-
     // gather n_active_feats dense features from N sparse input features with c
     // feature dimensions
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
@@ -764,14 +787,12 @@ void convolution_forward_cuda_fallback(at::Tensor in_feat, at::Tensor out_feat,
                   in_buffer_activated.data_ptr<scalar_t>(),
                   neighbor_map.data_ptr<int>() + cur_offset, transpose);
         }));
-
     // gemm: (i, c) X (c, o) = (i, o)
     int kmap_idx = i;
     if (conv_mode == 2) {
       kmap_idx = i < mid_kernel ? i * 2 : (kernel_volume - i) * 2 - 1;
     }
     torch::mm_out(out_buffer_activated, in_buffer_activated, kernel[kmap_idx]);
-
     // scatter n_active_feats dense features into n_out_feats output features of
     // dimension n_out_channels
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
@@ -783,11 +804,14 @@ void convolution_forward_cuda_fallback(at::Tensor in_feat, at::Tensor out_feat,
                   out_feat.data_ptr<scalar_t>(),
                   neighbor_map.data_ptr<int>() + cur_offset, transpose);
         }));
-
     cur_offset += 2 * n_active_feats;
   }
-}
 
+  if (padded) {
+    out_feat = at::slice(out_feat, 1, 0, n_out_channels - 1).contiguous();
+  }
+  return out_feat;
+}
 void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
                                at::Tensor grad_out_feat, at::Tensor kernel,
                                at::Tensor grad_kernel, at::Tensor neighbor_map,
@@ -797,20 +821,17 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
   grad_in_feat.zero_();
   grad_kernel.resize_as_(kernel);
   grad_kernel.zero_();
-
   bool is_half = in_feat.scalar_type() == at::ScalarType::Half;
   int n_in_feats = in_feat.size(0);
   int n_in_channels = in_feat.size(1);
   int n_out_feats = grad_out_feat.size(0);
   int n_out_channels = kernel.size(-1);
-
   int kernel_volume = kernel.size(0);
   bool flag = false;
   int in_buffer_size;
   in_buffer_size =
       *std::max_element(neighbor_offset.data_ptr<int>(),
                         neighbor_offset.data_ptr<int>() + kernel_volume);
-
   auto options =
       torch::TensorOptions().dtype(in_feat.dtype()).device(in_feat.device());
   auto in_buffer = torch::zeros({in_buffer_size, in_feat.size(1)}, options);
@@ -818,7 +839,6 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
       torch::zeros({in_buffer_size, in_feat.size(1)}, options);
   auto out_grad_buffer =
       torch::zeros({in_buffer_size, kernel.size(2)}, options);
-
   int cur_offset = 0;
   for (int i = 0; i < kernel_volume; i++) {
     auto kernel_grad_buffer = grad_kernel[i];
@@ -827,11 +847,9 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
       cur_offset += 2 * n_active_feats;
       continue;
     }
-
     if (n_active_feats == 0) {
       continue;
     }
-
     // Can't figure out a cleaner way to do this
     at::Tensor out_grad_buffer_activated;
     at::Tensor in_grad_buffer_activated;
@@ -857,7 +875,6 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
           torch::from_blob(in_buffer.data_ptr<float>(),
                            {n_active_feats, in_feat.size(1)}, options);
     }
-
     // gather
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
         in_feat.type(), "convolution_forward_cuda", ([&] {
@@ -868,7 +885,6 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
                   out_grad_buffer_activated.data_ptr<scalar_t>(),
                   neighbor_map.data_ptr<int>() + cur_offset, !transpose);
         }));
-
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
         in_feat.type(), "convolution_forward_cuda", ([&] {
           gather_kernel<scalar_t>
@@ -878,14 +894,12 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
                   in_buffer_activated.data_ptr<scalar_t>(),
                   neighbor_map.data_ptr<int>() + cur_offset, transpose);
         }));
-
     // gemm
     torch::mm_out(in_grad_buffer_activated, out_grad_buffer_activated,
                   torch::transpose(kernel[i], 0, 1));
     torch::mm_out(kernel_grad_buffer,
                   torch::transpose(in_buffer_activated, 0, 1),
                   out_grad_buffer_activated);
-
     // scatter
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
         in_feat.type(), "convolution_forward_cuda", ([&] {
@@ -896,7 +910,6 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
                   grad_in_feat.data_ptr<scalar_t>(),
                   neighbor_map.data_ptr<int>() + cur_offset, !transpose);
         }));
-
     cur_offset += 2 * n_active_feats;
   }
 }
