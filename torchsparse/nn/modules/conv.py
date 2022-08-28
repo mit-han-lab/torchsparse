@@ -1,6 +1,6 @@
 import math
 from functools import cached_property
-from typing import Dict, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
