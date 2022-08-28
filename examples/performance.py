@@ -16,22 +16,19 @@ from torchsparse.utils.quantize import sparse_quantize
 def generate_random_point_cloud(size=100000, voxel_size=0.2):
     pc = np.random.randn(size, 4)
     pc[:, :3] = pc[:, :3] * 10
-    rounded_pc = np.round(pc[:, :3] / voxel_size).astype(np.int32)
     labels = np.random.choice(10, size)
-    inds, _, inverse_map = sparse_quantize(rounded_pc,
-                                           pc,
-                                           labels,
-                                           return_index=True,
-                                           return_invs=True)
+    coords, feats = pc[:, :3], pc
+    coords -= np.min(coords, axis=0, keepdims=True)
+    coords, indices = sparse_quantize(coords, voxel_size, return_index=True)
 
-    voxel_pc = rounded_pc[inds]
-    voxel_feat = pc[inds]
-    voxel_labels = labels[inds]
+    coords = torch.tensor(coords, dtype=torch.int)
+    feats = torch.tensor(feats[indices], dtype=torch.float)
+    labels = torch.tensor(labels[indices], dtype=torch.long)
 
-    sparse_tensor = SparseTensor(voxel_feat, voxel_pc)
-    label_tensor = SparseTensor(voxel_labels, voxel_pc)
+    input = SparseTensor(coords=coords, feats=feats)
+    label = SparseTensor(coords=coords, feats=labels)
 
-    feed_dict = {'lidar': sparse_tensor, 'targets': label_tensor}
+    feed_dict = {'input': input, 'label': label}
 
     return feed_dict
 
@@ -65,8 +62,8 @@ def dummy_train_3x3(device):
         with profiler.record_function('model_inference'):
             for _ in range(10):
                 feed_dict = generate_batched_random_point_clouds()
-                inputs = feed_dict['lidar'].to(device)
-                targets = feed_dict['targets'].F.to(device).long()
+                inputs = feed_dict['input'].to(device)
+                targets = feed_dict['label'].F.to(device).long()
                 outputs = model(inputs)
                 optimizer.zero_grad()
                 loss = criterion(outputs.F, targets)
@@ -100,8 +97,8 @@ def dummy_train_3x1(device):
         with profiler.record_function('model_inference'):
             for _ in range(10):
                 feed_dict = generate_batched_random_point_clouds()
-                inputs = feed_dict['lidar'].to(device)
-                targets = feed_dict['targets'].F.to(device).long()
+                inputs = feed_dict['input'].to(device)
+                targets = feed_dict['label'].F.to(device).long()
                 outputs = model(inputs)
                 optimizer.zero_grad()
                 loss = criterion(outputs.F, targets)

@@ -24,7 +24,9 @@ def spdownsample(
 
     if all(stride[k] in [1, kernel_size[k]] for k in range(3)):
         coords = coords.clone()
-        coords[:, :3] = coords[:, :3] // sample_stride * sample_stride
+        coords[:, :3] = torch.div(
+            coords[:, :3],
+            sample_stride.float()).trunc() * sample_stride  # type: ignore
         coords = coords[:, [3, 0, 1, 2]]
         coords = torch.unique(coords, dim=0)
         coords = coords[:, [1, 2, 3, 0]]
