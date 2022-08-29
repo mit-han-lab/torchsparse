@@ -93,3 +93,25 @@ if __name__ == '__main__':
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
+    
+    # enable torchsparse 2.0 inference
+    model.eval()
+    # enable fused and locality-aware memory access optimization
+    torchsparse.backends.benchmark = True
+    # enable adaptive grouping optimization
+    torchsparse.tune(
+        model=model,
+        data_loader=dataflow,
+        n_samples=10,
+        collect_fn=lambda data: data['input'],
+    )
+    with torch.no_grad():
+        for k, feed_dict in enumerate(dataflow):
+            inputs = feed_dict['input'].to(device=args.device).half()
+            labels = feed_dict['label'].to(device=args.device)
+
+            with amp.autocast(enabled=True):
+                outputs = model(inputs)
+                loss = criterion(outputs.feats, labels.feats)
+
+            print(f'[inference step {k + 1}] loss = {loss.item()}')
