@@ -8,6 +8,7 @@ import torch.utils.data
 from torch import nn
 from torch.cuda import amp
 
+import torchsparse
 from torchsparse import SparseTensor
 from torchsparse import nn as spnn
 from torchsparse.utils.collate import sparse_collate_fn
