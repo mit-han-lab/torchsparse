@@ -78,7 +78,7 @@ def tune(
     model: nn.Module,
     data_loader: Iterable,
     n_samples: int = 100,
-    collect_fn: Callable = lambda data: data['input'],
+    collect_fn: Callable = lambda data: data,
     enable_fp16: bool = False,
     kmap_mode: str = 'hashmap',
     save_dir: str = '~/.torchsparse',
