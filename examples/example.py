@@ -94,11 +94,11 @@ if __name__ == '__main__':
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
-    
+
     # enable torchsparse 2.0 inference
     model.eval()
     # enable fused and locality-aware memory access optimization
-    torchsparse.backends.benchmark = True
+    torchsparse.backends.benchmark = True  # type: ignore
     # enable adaptive grouping optimization
     torchsparse.tune(
         model=model,

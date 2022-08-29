@@ -38,10 +38,8 @@ class ToDenseBEVConvolution(nn.Module):
 
     Group points with the same z value together and apply the same FC kernel.
     Aggregate the results by summing up all features within one BEV grid.
-
     Note:
         This module consumes larger memory than `ToBEVHeightCompression`.
-
     Args:
         in_channels: Number of input channels
         out_channels: Number of output channels
@@ -86,11 +84,12 @@ class ToDenseBEVConvolution(nn.Module):
         coords, feats, stride = input.coords, input.feats, input.stride
         stride = torch.tensor(stride).unsqueeze(dim=0).to(feats)[:, self.dim]
 
-        kernel = torch.index_select(self.kernel, 0,
-                                    (coords[:, self.dim] // stride).long())
+        kernel = torch.index_select(
+            self.kernel, 0,
+            torch.div(coords[:, self.dim], stride).trunc().long())
         feats = (feats.unsqueeze(dim=-1) * kernel).sum(1) + self.bias
         coords = (coords - self.offset).t()[[3] + self.bev_dims].long()
-        coords[1:] = (coords[1:] // stride).long()
+        coords[1:] = torch.div(coords[1:], stride).trunc().long()
         indices = coords[0] * int(self.bev_shape.prod()) + coords[1] * int(
             self.bev_shape[1]) + coords[2]
         batch_size = coords[0].max().item() + 1
@@ -140,8 +139,9 @@ class ToBEVConvolution(nn.Module):
         ratio = stride * self.stride
         stride = torch.tensor(stride).unsqueeze(dim=0).to(feats)[:, self.dim]
 
-        kernels = torch.index_select(self.kernel, 0,
-                                     coords[:, self.dim].long() // stride)
+        kernels = torch.index_select(
+            self.kernel, 0,
+            torch.div(coords[:, self.dim].long(), stride).trunc())
         feats = (feats.unsqueeze(dim=-1) * kernels).sum(1) + self.bias
         coords = coords.t().long()
         coords[self.dim, :] = 0
@@ -195,7 +195,7 @@ class ToBEVHeightCompression(nn.Module):
         # now stride must be torch.Tensor since input.s is tuple.
         stride = stride[:, self.bev_dims + [self.dim]].t()
 
-        coords[1:] = (coords[1:] // stride).long()
+        coords[1:] = torch.div(coords[1:], stride).trunc().long()
         coords[-1] = torch.clamp(coords[-1], 0, shape[-1] - 1)
         indices = coords[0] * int(shape.prod()) + coords[1] * int(
             shape[1:].prod()) + coords[2] * int(shape[2]) + coords[3]
