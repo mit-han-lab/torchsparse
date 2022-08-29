@@ -9,10 +9,12 @@ __all__ = ['SparseTensor', 'PointTensor']
 
 class SparseTensor:
 
-    def __init__(self,
-                 feats: torch.Tensor,
-                 coords: torch.Tensor,
-                 stride: Union[int, Tuple[int, ...]] = 1) -> None:
+    def __init__(
+        self,
+        feats: torch.Tensor,
+        coords: torch.Tensor,
+        stride: Union[int, Tuple[int, ...]] = 1,
+    ) -> None:
         self.feats = feats
         self.coords = coords
         self.stride = make_ntuple(stride, ndim=3)
@@ -51,6 +53,10 @@ class SparseTensor:
     def cuda(self):
         self.coords = self.coords.cuda()
         self.feats = self.feats.cuda()
+        return self
+
+    def half(self):
+        self.feats = self.feats.half()
         return self
 
     def detach(self):

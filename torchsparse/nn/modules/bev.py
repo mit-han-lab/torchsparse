@@ -38,10 +38,8 @@ class ToDenseBEVConvolution(nn.Module):
 
     Group points with the same z value together and apply the same FC kernel.
     Aggregate the results by summing up all features within one BEV grid.
-
     Note:
         This module consumes larger memory than `ToBEVHeightCompression`.
-
     Args:
         in_channels: Number of input channels
         out_channels: Number of output channels

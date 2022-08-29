@@ -1,4 +1,5 @@
 from .activation import *
+from .build_kmap import *
 from .conv import *
 from .count import *
 from .crop import *
