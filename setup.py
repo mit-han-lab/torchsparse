@@ -9,6 +9,9 @@ from torch.utils.cpp_extension import (CUDA_HOME, BuildExtension, CppExtension,
 
 from torchsparse import __version__
 
+with open('requirements.txt') as fp:
+    install_requires = fp.read()
+
 if ((torch.cuda.is_available() and CUDA_HOME is not None)
         or (os.getenv('FORCE_CUDA', '0') == '1')):
     device = 'cuda'
@@ -31,6 +34,7 @@ setup(
     name='torchsparse',
     version=__version__,
     packages=find_packages(),
+    install_requires=install_requires,
     ext_modules=[
         extension_type('torchsparse.backend',
                        sources,
