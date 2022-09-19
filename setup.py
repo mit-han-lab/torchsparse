@@ -7,7 +7,12 @@ from setuptools import find_packages, setup
 from torch.utils.cpp_extension import (CUDA_HOME, BuildExtension, CppExtension,
                                        CUDAExtension)
 
-from torchsparse import __version__
+
+def get_version():
+    version_file = 'torchsparse/version.py'
+    with open(version_file, encoding='utf-8') as f:
+        exec(compile(f.read(), version_file, 'exec'))
+    return locals()['__version__']
 
 with open('requirements.txt') as fp:
     install_requires = fp.read()
@@ -32,7 +37,7 @@ extra_compile_args = {
 
 setup(
     name='torchsparse',
-    version=__version__,
+    version=get_version(),
     packages=find_packages(),
     install_requires=install_requires,
     ext_modules=[

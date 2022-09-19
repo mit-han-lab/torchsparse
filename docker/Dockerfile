@@ -32,8 +32,12 @@ RUN echo "deb [by-hash=no] http://developer.download.nvidia.com/compute/cuda/rep
   && rm -rf /var/lib/apt/lists/*
 
 RUN pip install \
-  --find-links https://download.pytorch.org/whl/torch_stable.html \
-  --no-cache-dir \
-    torch==1.10.0+cu113 \
-    git+https://github.com/mit-han-lab/torchsparse.git
-    
+    --find-links https://download.pytorch.org/whl/torch_stable.html \
+    --no-cache-dir \
+      torch==1.10.0+cu113
+      
+COPY . .
+ENV MAX_JOBS=4
+RUN pip install \
+    --no-cache-dir \
+    --verbose .
