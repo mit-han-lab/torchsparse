@@ -1,6 +1,6 @@
-## Frequently Asked Questions
+# Frequently Asked Questions
 
-Before posting an issue, please go through the following troubleshooting steps on your own:
+We list some common troubles faced by many users and their corresponding solutions here. Before posting an issue, please go through the following troubleshooting steps first:
 
 - Check whether the issue is TorchSparse specific or environment specific. Try creating an isolated environment via Docker or on another computer and see if the error persists. If using TorchSparse as a dependancy of another project, ensure the downstream project is compatible with the version of TorchSparse that you installed.
 
