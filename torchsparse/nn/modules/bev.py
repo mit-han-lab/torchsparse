@@ -38,8 +38,10 @@ class ToDenseBEVConvolution(nn.Module):
 
     Group points with the same z value together and apply the same FC kernel.
     Aggregate the results by summing up all features within one BEV grid.
+
     Note:
-        This module consumes larger memory than `ToBEVHeightCompression`.
+        This module consumes larger memory than ``ToBEVHeightCompression``.
+
     Args:
         in_channels: Number of input channels
         out_channels: Number of output channels
@@ -157,8 +159,8 @@ class ToBEVHeightCompression(nn.Module):
     """Converts a SparseTensor to a flattened volumetric tensor.
 
     Args:
-        channels: Number of input channels
-        (Note: output channels = channels x #unique z values)
+        channels: Number of input channels 
+            (Note: output channels = channels x #unique z values)
         shape: Shape of BEV map
         dim: Dimension index for z (default: 1 for KITTI coords)
     """

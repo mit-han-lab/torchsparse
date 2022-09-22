@@ -9,6 +9,14 @@ __all__ = ['sparse_collate', 'sparse_collate_fn']
 
 
 def sparse_collate(inputs: List[SparseTensor]) -> SparseTensor:
+    """Assemble a batch of sparse tensors and add the batch dimension to coords.
+
+    Args:
+        inputs (List[SparseTensor]): A list of sparse tensors.
+
+    Returns:
+        SparseTensor: A batch of collated sparse tensors.
+    """
     coords, feats = [], []
     stride = inputs[0].stride
 
@@ -38,6 +46,14 @@ def sparse_collate(inputs: List[SparseTensor]) -> SparseTensor:
 
 
 def sparse_collate_fn(inputs: List[Any]) -> Any:
+    """Access the sparse tensors in the input list and call sparse_collate.
+    
+    Args:
+        inputs (List[Any]): A list of inputs.
+
+    Returns:
+        Any: inputs with the sparse tensors collated.
+    """
     if isinstance(inputs[0], dict):
         output = {}
         for name in inputs[0].keys():

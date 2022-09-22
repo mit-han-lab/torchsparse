@@ -8,12 +8,14 @@ __all__ = ['BatchNorm', 'GroupNorm']
 
 
 class BatchNorm(nn.BatchNorm1d):
+    """ Batch normalization layer. """
 
     def forward(self, input: SparseTensor) -> SparseTensor:
         return fapply(input, super().forward)
 
 
 class GroupNorm(nn.GroupNorm):
+    """ Group normalization layer. """
 
     def forward(self, input: SparseTensor) -> SparseTensor:
         coords, feats, stride = input.coords, input.feats, input.stride

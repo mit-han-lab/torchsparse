@@ -8,6 +8,14 @@ __all__ = ['cat']
 
 
 def cat(inputs: List[SparseTensor]) -> SparseTensor:
+    """Concatenate a list of sparse tensors.
+    
+    Args:
+        inputs (List[SparseTensor]): A list of sparse tensors.
+    
+    Returns:
+        SparseTensor: The concatenated sparse tensor.
+    """
     feats = torch.cat([input.feats for input in inputs], dim=1)
     output = SparseTensor(coords=inputs[0].coords,
                           feats=feats,

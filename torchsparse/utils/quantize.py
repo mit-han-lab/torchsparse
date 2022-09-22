@@ -26,6 +26,17 @@ def sparse_quantize(coords,
                     *,
                     return_index: bool = False,
                     return_inverse: bool = False) -> List[np.ndarray]:
+    """Voxelize x, y, z coordinates and remove duplicates.
+    
+    Args:
+        coords (np.ndarray): An Nx3 array of x, y, z coordinates.
+        voxel_size (Union[float, Tuple[float, ...]]): The voxel size.
+        return_index (bool): Whether to return the indices of the voxels.
+        return_inverse (bool): Whether to return the indices of the original.
+
+    Returns:
+        List[np.ndarray]: A list of voxelized coordinates.
+    """
     if isinstance(voxel_size, (float, int)):
         voxel_size = tuple(repeat(voxel_size, 3))
     assert isinstance(voxel_size, tuple) and len(voxel_size) == 3

@@ -86,14 +86,25 @@ def tune(
 ):
     """Search for the best group strategy by the provided model and data loader.
 
+    n_samples of samples will be used to tune the best group strategy. The tuned
+    group configs will then be saved to ``save_dir/tune_id`` and loaded to 
+    model. If there is already a tuned group config in ``save_dir/tune_id``,
+    it will be loaded directly without doing the tuning.
+
     Args:
         model: A nn.Module to be profiled for best group configs.
         data_loader: An iterator with data samples. Recommended
             to use the same data loader for training.
-        n_samples: Number of samples for profiling group configs.
+        n_samples: Number of samples for tuning group configs.
         collect_fn: Process data before calling model.forward(). In other words,
-            run `model(*collect_fn(data))` where data is yielded by data_loader.
-            The default case handles {'input': SparseTensor,...} for data.
+            run ``model(*collect_fn(data))`` where data is yielded by
+            ``data_loader``. The default case handles 
+            {'input': SparseTensor,...} for data.
+        enable_fp16: Whether to use half precision for tuning.
+        kmap_mode: The kernel map mode for tuning. Options are 'hashmap' and
+            'grid'.
+        save_dir: The directory to save the tuned group configs.
+        tune_id: The id of this tuning run used for saving.
     """
     # An iterator can only be used once, so use with care.
     if isinstance(data_loader, Iterator):

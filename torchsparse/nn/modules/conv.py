@@ -15,6 +15,21 @@ __all__ = ['Conv3d']
 
 
 class Conv3d(nn.Module):
+    """3D convolution layer for a sparse tensor.
+
+    Args:
+        in_channels (int): Number of channels in the input sparse tensor.
+        out_channels (int): Number of channels in the output sparse tensor.
+        kernel_size (int or tuple): Size of the 3D convolving kernel.
+        stride (int or tuple): Stride of the convolution. Default: 1.
+        dilation (int or tuple): Spacing between kernel elements. Default: 1.
+        bias (bool): If True, add a learnable bias to the output. Default: True.
+        transposed (bool): If True, use transposed convolution. Default: False.
+        config (dict): The 3D convolution configuration, which includes the
+            ``kmap_mode`` (hashmap or grid), and ``epsilon`` (redundant 
+            computation tolerance) and ``mm_thresh`` (mm/bmm threshold) when 
+            using the adaptive matmul grouping. Default: None.
+    """
 
     def __init__(self,
                  in_channels: int,
