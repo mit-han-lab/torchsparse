@@ -1,6 +1,11 @@
 import math
-from functools import cached_property
+import sys
 from typing import Dict, List, Tuple, Union
+
+if sys.version_info >= (3, 8):
+    from functools import cached_property
+else:
+    from backports.cached_property import cached_property
 
 import numpy as np
 import torch
