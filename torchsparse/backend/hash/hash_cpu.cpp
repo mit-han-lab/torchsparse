@@ -26,7 +26,7 @@ void cpu_kernel_hash_wrapper(int N, int K, const int *data,
       for (int j = 0; j < 3; j++) {
         cur_coord[j] = data[i * 4 + j] + kernel_offset[k * 3 + j];
       }
-      cur_coord[3] = data[3];
+      cur_coord[3] = data[i * 4 + 3];
       uint64_t hash = 14695981039346656037UL;
       for (int j = 0; j < 4; j++) {
         hash ^= (unsigned int)cur_coord[j];
