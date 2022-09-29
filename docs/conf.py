@@ -28,7 +28,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    'sphinx-markdown-tables',
+    'sphinx_markdown_tables',
     'myst_parser',
 ]
 
