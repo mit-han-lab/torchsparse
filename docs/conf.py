@@ -34,7 +34,9 @@ extensions = [
 
 add_module_names = False
 autodoc_member_order = 'bysource'
-autodoc_mock_imports = ['torchvision', 'numpy']
+autodoc_mock_imports = [
+    'torchvision', 'numpy', 'tqdm', 'typing-extensions', 
+    'backports.cached_property']
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/', None),
