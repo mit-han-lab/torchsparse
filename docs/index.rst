@@ -9,32 +9,31 @@ Welcome to TorchSparse's documentation!
 **TorchSparse** is a high-performance neural network library for point cloud processing.
 
 .. toctree::
-   :maxdepth: 3
+    :glob:
+    :maxdepth: 1
+    :caption: Getting Started
 
-   installation.md
-   introduction.md
-   optimization.md
-   faq.md
-   reference/index
+    getting_started/installation.md
+    getting_started/introduction.md
 
-Citation
---------
-If you use TorchSparse, please use the following BibTeX entries to cite:
+.. toctree::
+    :glob:
+    :maxdepth: 1
+    :caption: Guides
 
-::
+    guides/optimization.md
 
-   @inproceedings{tang2022torchsparse,
-      title = {{TorchSparse: Efficient Point Cloud Inference Engine}},
-      author = {Tang, Haotian and Liu, Zhijian and Li, Xiuyu and Lin, Yujun and Han, Song},
-      booktitle = {Conference on Machine Learning and Systems (MLSys)},
-      year = {2022}
-   }
+.. toctree::
+    :glob:
+    :maxdepth: 1
+    :caption: Reference
 
-::
+    reference/index
+    reference/citation.md
 
-   @inproceedings{tang2020searching,
-      title = {{Searching Efficient 3D Architectures with Sparse Point-Voxel Convolution}},
-      author = {Tang, Haotian and Liu, Zhijian and Zhao, Shengyu and Lin, Yujun and Lin, Ji and Wang, Hanrui and Han, Song},
-      booktitle = {European Conference on Computer Vision (ECCV)},
-      year = {2020}
-   }
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Support
+
+   support/faq.md
