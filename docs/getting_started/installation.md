@@ -21,14 +21,14 @@ We provide pre-built torchsparse packages (recommended) with different PyTorch a
 
 3. Install TorchSparse:
     ```bash
-    pip install torchsparse -f https://hanlab.mit.edu/whl/torchsparse/torch-${TORCH}+${CUDA}.html
+    pip install torchsparse==2.0.0+torch${TORCH}cu${CUDA} -i https://pypi.hanlab.ai/simple
     ```
 
     where `${CUDA}` and `${TORCH}` should be replaced by the specific CUDA version and PyTorch version, respectively.
-    For example, for PyTorch 1.12.0 and CUDA 11.6, type:
+    For example, for PyTorch 1.9.x and CUDA 10.2, type:
 
     ```bash
-    pip install torchsparse -f https://hanlab.mit.edu/whl/torchsparse/torch-1.12.0+cu116.html
+    pip install torchsparse==2.0.0+torch19cu102 -i https://pypi.hanlab.ai/simple
     ```
 
 ## Installation from Source
