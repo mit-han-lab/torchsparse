@@ -1,0 +1,129 @@
+name: Building Wheels
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+
+  wheel:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        torch-version: [1.9.0, 1.10.0, 1.11.0, 1.12.0]
+        cuda-version: ['cpu', 'cu102', 'cu111', 'cu113', 'cu115', 'cu116']
+        exclude:
+          - torch-version: 1.9.0
+            cuda-version: 'cu113'
+          - torch-version: 1.9.0
+            cuda-version: 'cu115'
+          - torch-version: 1.9.0
+            cuda-version: 'cu116'
+          - torch-version: 1.9.0
+            python-version: '3.10'
+          - torch-version: 1.10.0
+            cuda-version: 'cu115'
+          - torch-version: 1.10.0
+            cuda-version: 'cu116'
+          - torch-version: 1.10.0
+            python-version: '3.10'
+          - torch-version: 1.11.0
+            cuda-version: 'cu111'
+          - torch-version: 1.11.0
+            cuda-version: 'cu116'
+          - torch-version: 1.12.0
+            cuda-version: 'cu111'
+          - torch-version: 1.12.0
+            cuda-version: 'cu115'
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Free up disk space
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo rm -rf /usr/share/dotnet
+
+      - name: Install ninja
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ninja-build
+
+      - name: Install CUDA ${{ matrix.cuda-version }}
+        if: ${{ matrix.cuda-version != 'cpu' }}
+        run: |
+          bash .github/workflows/cuda/${{ matrix.cuda-version }}-${{ runner.os }}.sh
+
+      - name: Set torchsparse version
+        run: |
+          torch_version=$(echo ${{ matrix.torch-version }} | cut -d- -f1 | tr -d '.')
+          torch_version=torch${torch_version::-1}
+          echo 2.0.0+${torch_version}${{ matrix.cuda-version }} > torchsparse/version.txt
+          cat torchsparse/version.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Install PyTorch ${{ matrix.torch-version }}+${{ matrix.cuda-version }}
+        run: |
+          pip install --no-index --no-cache-dir torch==${{ matrix.torch-version}} -f https://download.pytorch.org/whl/${{ matrix.cuda-version }}/torch_stable.html
+          python -c "import torch; print('PyTorch:', torch.__version__)"
+          python -c "import torch; print('CUDA:', torch.version.cuda)"
+          python -c "import torch; print('Is CUDA available:', torch.cuda.is_available())"
+
+      - name: Install sparsehash
+        run: |
+          sudo apt-get install libsparsehash-dev
+
+      - name: Build wheel for GPU
+        if: ${{ matrix.cuda-version != 'cpu' }}
+        run: |
+          source .github/workflows/cuda/${{ matrix.cuda-version }}-${{ runner.os }}-env.sh
+          echo $CUDA_HOME
+          echo $FORCE_CUDA
+          python setup.py bdist_wheel --dist-dir=dist
+        shell:
+          bash
+
+      - name: Build wheel for CPU
+        if: ${{ matrix.cuda-version == 'cpu' }}
+        run: |
+          python setup.py bdist_wheel --dist-dir=dist
+        shell:
+          bash
+
+      - name: Install wheel
+        run: |
+          files=(./dist/*.whl)
+          whl=${files[0]}
+          python -m pip install $whl
+
+      - name: Test imports
+        run: |
+          cd ./docs
+          python -c "import torchsparse"
+          python -c "import torchsparse.backend; torchsparse.backend.convolution_forward_cpu"
+
+      - name: Test imports for GPU
+        if: ${{ matrix.cuda-version != 'cpu' }}
+        run: |
+          cd ./docs
+          python -c "import torchsparse.backend; torchsparse.backend.convolution_forward_cuda"
+
+      - name: Install twine
+        run: |
+          pip install twine
+
+      - name: Upload wheel
+        run: |
+          twine upload -u torchsparse -p ${{ secrets.PYPI_PASSWORD }} ./dist/* --repository-url https://pypi.hanlab.ai/
