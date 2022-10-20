@@ -13,22 +13,16 @@ We provide pre-built torchsparse packages (recommended) with different PyTorch a
     >>> 1.10.0
     ```
 
-2. Find the CUDA version PyTorch was installed with:
+2. Ensure PyTorch was installed with CUDA:
     ```bash
     python -c "import torch; print(torch.version.cuda)"
     >>> 11.3
     ```
 
-3. Install TorchSparse:
-    ```bash
-    pip install torchsparse==2.0.0+torch${TORCH}cu${CUDA} -i https://pypi.hanlab.ai/simple
-    ```
-
-    where `${CUDA}` and `${TORCH}` should be replaced by the specific CUDA version and PyTorch version, respectively.
-    For example, for PyTorch 1.9.x and CUDA 10.2, type:
+3. Then the right TorchSparse wheel can be found and installed by running the installation script:
 
     ```bash
-    pip install torchsparse==2.0.0+torch19cu102 -i https://pypi.hanlab.ai/simple
+    /bin/bash -c "$(curl -fsSL https://github.com/mit-han-lab/torchsparse/blob/master/install.sh)"
     ```
 
 ## Installation from Source
