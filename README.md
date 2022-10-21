@@ -1,4 +1,4 @@
-# TorchSparse
+# TorchSparse - for windows
 
 TorchSparse is a high-performance neural network library for point cloud processing.
 
