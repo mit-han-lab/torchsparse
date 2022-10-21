@@ -12,7 +12,7 @@ __global__ void hash_kernel(int N, const int *__restrict__ data,
   int i = blockDim.x * blockIdx.x + threadIdx.x;
   if (i < N) {
     data += i * 4;
-    uint64_t hash = 14695981039346656037UL;
+    unsigned long long hash = 14695981039346656037UL;
     for (int j = 0; j < 4; j++) {
       hash ^= (unsigned int)data[j];
       hash *= 1099511628211UL;
@@ -44,7 +44,7 @@ __global__ void kernel_hash_kernel(int N, int K, const int *__restrict__ data,
       cur_coord[j] = data[j] + kernel_offset[k * 3 + j];
     }
     cur_coord[3] = data[3];
-    uint64_t hash = 14695981039346656037UL;
+    unsigned long long hash = 14695981039346656037UL;
     for (int j = 0; j < 4; j++) {
       hash ^= (unsigned int)cur_coord[j];
       hash *= 1099511628211UL;
