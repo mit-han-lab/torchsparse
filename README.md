@@ -4,42 +4,18 @@ TorchSparse is a high-performance neural network library for point cloud process
 
 ## Installation
 
-TorchSparse depends on the [Google Sparse Hash](https://github.com/sparsehash/sparsehash) library.
+The latest released TorchSparse (v2.0.0) can be installed by following the [instructions](https://torchsparse.readthedocs.io/en/latest/getting_started/installation.html) in the documentation.  
 
-- On Ubuntu, it can be installed by
-
-  ```bash
-  sudo apt-get install libsparsehash-dev
-  ```
-
-- On Mac OS, it can be installed by
-
-  ```bash
-  brew install google-sparsehash
-  ```
-
-- You can also compile the library locally (if you do not have the sudo permission) and add the library path to the environment variable `CPLUS_INCLUDE_PATH`.
-
-The latest released TorchSparse (v1.4.0) can then be installed by
+To install previous released TorchSparse packages (v1.0.0, v1.1.0, v1.2.0, v1.4.0), you can use the command below:
 
 ```bash
-pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@v1.4.0
+pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@{VERSION}
 ```
+Where `{VERSION}` is the specific TorchSparse version that you want to use (e.g. `v1.4.0`). 
 
 If you use TorchSparse in your code, please remember to specify the exact version in your dependencies.
 
-For installation help and troubleshooting, please consult the [Frequently Asked Questions](./docs/FAQ.md) before posting an issue.
-
-## Benchmark
-
-We compare TorchSparse with [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) (where the latency is measured on NVIDIA GTX 1080Ti):
-
-|                          | MinkowskiEngine v0.4.3 | TorchSparse v1.0.0 |
-| :----------------------- | :--------------------: | :----------------: |
-| MinkUNet18C (MACs / 10)  |        224.7 ms        |      124.3 ms      |
-| MinkUNet18C (MACs / 4)   |        244.3 ms        |      160.9 ms      |
-| MinkUNet18C (MACs / 2.5) |        269.6 ms        |      214.3 ms      |
-| MinkUNet18C              |        323.5 ms        |      294.0 ms      |
+For installation help and troubleshooting, please consult the [Frequently Asked Questions](https://torchsparse.readthedocs.io/en/latest/support/faq.html) before posting an issue.
 
 ## Getting Started
 
