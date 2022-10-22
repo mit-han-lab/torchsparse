@@ -6,14 +6,14 @@ TorchSparse is available for Python 3.7 to Python 3.10. Before installing torchs
 
 We provide pre-built torchsparse packages (recommended) with different PyTorch and CUDA versions to simplify the building for the Linux system. 
 
-1. Ensure that at least PyTorch 1.9.0 is installed:
+1. Ensure at least PyTorch 1.9.0 is installed:
 
     ```bash
     python -c "import torch; print(torch.__version__)"
     >>> 1.10.0
     ```
 
-2. Ensure PyTorch was installed with CUDA:
+2. If you want to use TorchSparse with gpus, please ensure PyTorch was installed with CUDA:
     ```bash
     python -c "import torch; print(torch.version.cuda)"
     >>> 11.3
