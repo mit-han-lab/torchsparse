@@ -6,7 +6,7 @@ TorchSparse is a high-performance neural network library for point cloud process
 
 The latest released TorchSparse (v2.0.0) can be installed by following the [instructions](https://torchsparse.readthedocs.io/en/latest/getting_started/installation.html) in the documentation.  
 
-To install previous released TorchSparse packages (v1.0.0, v1.1.0, v1.2.0, v1.4.0), you can use the command below:
+To install previously released TorchSparse packages (v1.0.0, v1.1.0, v1.2.0, v1.4.0), you can use the command below:
 
 ```bash
 pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@{VERSION}
