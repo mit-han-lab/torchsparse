@@ -87,7 +87,7 @@ def tune(
     """Search for the best group strategy by the provided model and data loader.
 
     n_samples of samples will be used to tune the best group strategy. The tuned
-    group configs will then be saved to ``save_dir/tune_id`` and loaded to 
+    group configs will then be saved to ``save_dir/tune_id`` and loaded to
     model. If there is already a tuned group config in ``save_dir/tune_id``,
     it will be loaded directly without doing the tuning.
 
@@ -98,7 +98,7 @@ def tune(
         n_samples: Number of samples for tuning group configs.
         collect_fn: Process data before calling model.forward(). In other words,
             run ``model(*collect_fn(data))`` where data is yielded by
-            ``data_loader``. The default case handles 
+            ``data_loader``. The default case handles
             {'input': SparseTensor,...} for data.
         enable_fp16: Whether to use half precision for tuning.
         kmap_mode: The kernel map mode for tuning. Options are 'hashmap' and

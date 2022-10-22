@@ -10,7 +10,7 @@ __all__ = ['SparseConvBlock', 'SparseConvTransposeBlock', 'SparseResBlock']
 
 
 class SparseConvBlock(nn.Sequential):
-    """ Sparse convolution block. """
+    """Sparse convolution block."""
 
     def __init__(self,
                  in_channels: int,
@@ -30,7 +30,7 @@ class SparseConvBlock(nn.Sequential):
 
 
 class SparseConvTransposeBlock(nn.Sequential):
-    """ Sparse convolution transpose block. """
+    """Sparse convolution transpose block."""
 
     def __init__(self,
                  in_channels: int,
@@ -51,7 +51,7 @@ class SparseConvTransposeBlock(nn.Sequential):
 
 
 class SparseResBlock(nn.Module):
-    """ Sparse residual block. """
+    """Sparse residual block."""
 
     def __init__(self,
                  in_channels: int,

@@ -31,8 +31,8 @@ class Conv3d(nn.Module):
         bias (bool): If True, add a learnable bias to the output. Default: True.
         transposed (bool): If True, use transposed convolution. Default: False.
         config (dict): The 3D convolution configuration, which includes the
-            ``kmap_mode`` (hashmap or grid), and ``epsilon`` (redundant 
-            computation tolerance) and ``mm_thresh`` (mm/bmm threshold) when 
+            ``kmap_mode`` (hashmap or grid), and ``epsilon`` (redundant
+            computation tolerance) and ``mm_thresh`` (mm/bmm threshold) when
             using the adaptive matmul grouping. Default: None.
     """
 

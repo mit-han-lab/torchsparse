@@ -16,4 +16,3 @@ torchsparse.nn
    torchsparse.nn.functional
    torchsparse.nn.modules
    torchsparse.nn.utils
-

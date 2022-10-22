@@ -47,7 +47,7 @@ def sparse_collate(inputs: List[SparseTensor]) -> SparseTensor:
 
 def sparse_collate_fn(inputs: List[Any]) -> Any:
     """Access the sparse tensors in the input list and call sparse_collate.
-    
+
     Args:
         inputs (List[Any]): A list of inputs.
 

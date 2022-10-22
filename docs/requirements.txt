@@ -1,5 +1,5 @@
+backports.cached_property
 furo
 myst-parser
 sphinx-markdown-tables
 torch
-backports.cached_property

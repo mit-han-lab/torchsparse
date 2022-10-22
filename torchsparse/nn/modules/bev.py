@@ -159,7 +159,7 @@ class ToBEVHeightCompression(nn.Module):
     """Converts a SparseTensor to a flattened volumetric tensor.
 
     Args:
-        channels: Number of input channels 
+        channels: Number of input channels
             (Note: output channels = channels x #unique z values)
         shape: Shape of BEV map
         dim: Dimension index for z (default: 1 for KITTI coords)

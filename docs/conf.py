@@ -3,13 +3,13 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import datetime
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 import os
-import datetime
 import sys
-sys.path.insert(0, os.path.abspath('../'))
 
+sys.path.insert(0, os.path.abspath('../'))
 
 project = 'torchsparse'
 copyright = f'{datetime.datetime.now().year}, MIT HAN Lab'
@@ -34,8 +34,7 @@ extensions = [
 
 add_module_names = False
 autodoc_member_order = 'bysource'
-autodoc_mock_imports = [
-    'torchvision', 'numpy', 'tqdm', 'typing-extensions']
+autodoc_mock_imports = ['torchvision', 'numpy', 'tqdm', 'typing-extensions']
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/', None),
@@ -44,9 +43,7 @@ intersphinx_mapping = {
 }
 
 templates_path = ['_templates']
-exclude_patterns = []
-
-
+exclude_patterns = []  # type: ignore
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -54,12 +51,12 @@ exclude_patterns = []
 html_theme = 'furo'
 html_static_path = ['_static']
 html_sidebars = {
-    "**": [
-        "sidebar/scroll-start.html",
-        "sidebar/brand.html",
-        "sidebar/search.html",
-        "sidebar/navigation.html",
-        "sidebar/ethical-ads.html",
-        "sidebar/scroll-end.html",
+    '**': [
+        'sidebar/scroll-start.html',
+        'sidebar/brand.html',
+        'sidebar/search.html',
+        'sidebar/navigation.html',
+        'sidebar/ethical-ads.html',
+        'sidebar/scroll-end.html',
     ]
 }

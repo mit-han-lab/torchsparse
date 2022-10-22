@@ -9,10 +9,10 @@ __all__ = ['cat']
 
 def cat(inputs: List[SparseTensor]) -> SparseTensor:
     """Concatenate a list of sparse tensors.
-    
+
     Args:
         inputs (List[SparseTensor]): A list of sparse tensors.
-    
+
     Returns:
         SparseTensor: The concatenated sparse tensor.
     """

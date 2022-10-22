@@ -8,13 +8,13 @@ __all__ = ['SparseTensor', 'PointTensor']
 
 
 class SparseTensor:
-    """ SparseTensor is the main data structure for point cloud.
+    """SparseTensor is the main data structure for point cloud.
 
     Args:
-        feats: 2D tensor with of shape N x C, where N is the number of points 
+        feats: 2D tensor with of shape N x C, where N is the number of points
             and C is the number of feature channels.
-        coords: 2D integer tensor with of shape N x 4, where the first three 
-            dimensions correspond to quantized x, y, z coordinates, and the 
+        coords: 2D integer tensor with of shape N x 4, where the first three
+            dimensions correspond to quantized x, y, z coordinates, and the
             last dimension denotes the batch index.
         stride: The tensor stride of the current sparse tensor.
     """

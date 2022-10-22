@@ -27,7 +27,7 @@ def sparse_quantize(coords,
                     return_index: bool = False,
                     return_inverse: bool = False) -> List[np.ndarray]:
     """Voxelize x, y, z coordinates and remove duplicates.
-    
+
     Args:
         coords (np.ndarray): An Nx3 array of x, y, z coordinates.
         voxel_size (Union[float, Tuple[float, ...]]): The voxel size.
