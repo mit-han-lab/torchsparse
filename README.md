@@ -2,6 +2,8 @@
 
 TorchSparse is a high-performance neural network library for point cloud processing.
 
+### [website](http://torchsparse.mit.edu/) | [paper](https://arxiv.org/abs/2204.10319) | [presentation](https://www.youtube.com/watch?v=IIh4EwmcLUs)
+
 ## Installation
 
 The latest released TorchSparse (v2.0.0) can be installed by following the [instructions](https://torchsparse.readthedocs.io/en/latest/getting_started/installation.html) in the documentation.  
