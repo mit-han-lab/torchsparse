@@ -81,7 +81,7 @@ def tune(
     collect_fn: Callable = lambda data: data,
     enable_fp16: bool = False,
     kmap_mode: str = 'hashmap',
-    save_dir: str = '~/.torchsparse',
+    save_dir: str = None,
     tune_id: str = 'temp',
 ):
     """Search for the best group strategy by the provided model and data loader.
@@ -139,6 +139,8 @@ def tune(
         })
 
     group_configs = {}
+    if save_dir is None:
+        save_dir = os.path.expanduser('~/.torchsparse')
     if os.path.exists(os.path.join(save_dir, tune_id)):
         print('Load existing tuned group configs')
         group_configs = torch.load(os.path.join(save_dir, tune_id))
