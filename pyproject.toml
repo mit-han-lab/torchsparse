@@ -1,2 +1,5 @@
 [build-system]
-requires = ["torch", "tqdm", "numpy"]
+# These version constraints come from Zendar's internal libraries that
+# require this package, just to reduce the chance of version
+# inconsistencies.
+requires = ["torch>=1.13.1, <2.0", "tqdm", "numpy"]
