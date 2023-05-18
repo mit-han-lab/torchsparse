@@ -2,6 +2,23 @@
 
 TorchSparse is a high-performance neural network library for point cloud processing.
 
+## Zendar usage
+
+Here at Zendar, we rely on a fork of this repo.
+
+### Rolling out updates at Zendar:
+
+If you need to update this code, the steps to do so are:
+1. make the code changes required, here in `ZendarInc/torchsparse`
+1. increment the `torchsparse/version.py` appropriately
+1. merge those changes into `zendar-main`
+1. in the RadarProcessor repo, set up the submodule to be at the new head of `zendar-main`
+1. in `RadarProcessor/systems/python`, remove and then re-add the `torchsparse` package, to capture the new version
+  1. `pdm remove torchsparse`
+  1. `pdm add ../../vendor/torchsparse`
+1. merge your changes into the develop branch in RadarProcessor
+
+
 ## Installation
 
 TorchSparse depends on the [Google Sparse Hash](https://github.com/sparsehash/sparsehash) library.
