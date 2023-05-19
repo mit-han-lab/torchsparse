@@ -2,4 +2,4 @@
 # These version constraints come from Zendar's internal libraries that
 # require this package, just to reduce the chance of version
 # inconsistencies.
-requires = ["torch==2.0.0+cu117", "tqdm", "numpy", "setuptools"]
+requires = ["torch", "tqdm", "numpy", "setuptools"]
