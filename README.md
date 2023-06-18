@@ -9,6 +9,33 @@ TorchSparse is a high-performance neural network library for point cloud process
 
 Point cloud computation has become an increasingly more important workload for autonomous driving and other applications. Unlike dense 2D computation, point cloud convolution has **sparse** and **irregular** computation patterns and thus requires dedicated inference system support with specialized high-performance kernels. While existing point cloud deep learning libraries have developed different dataflows for convolution on point clouds, they assume a single dataflow throughout the execution of the entire model. In this work, we systematically analyze and improve existing dataflows. Our resulting system, TorchSparse, achieves **2.9x**, **3.3x**, **2.2x** and **1.7x** measured end-to-end speedup on an NVIDIA A100 GPU over the state-of-the-art MinkowskiEngine, SpConv 1.2, TorchSparse (MLSys) and SpConv v2 in inference respectively. 
 
+## Installation
+
+We provide pre-built torchsparse v2.1.0 packages (recommended) with different PyTorch and CUDA versions to simplify the building for the Linux system.
+
+1. Ensure at least PyTorch 1.9.0 is installed:
+
+   ```bash
+   python -c "import torch; print(torch.__version__)"
+   >>> 1.10.0
+   ```
+
+1. If you want to use TorchSparse with gpus, please ensure PyTorch was installed with CUDA:
+
+   ```bash
+   python -c "import torch; print(torch.version.cuda)"
+   >>> 11.3
+   ```
+
+1. Then the right TorchSparse wheel can be found and installed by running the installation script:
+
+   ```bash
+   python -c "$(curl -fsSL https://raw.githubusercontent.com/mit-han-lab/torchsparse/main/install.py)"
+   ```
+   
+
+If Pypi server does not work as expected, no worries, you can still manually download the wheels. The wheels are listed in [this website](http://pypi.hanlab.ai/simple/torchsparse). One can utilize our installation script to automatically determine the version number used to index the wheels. For example, if you use PyTorch 1.11.0, CUDA 11.5, the version number will end up to be 2.1.0+torch111cu115. You can then select the proper wheel according to your Python version.
+
 ## Benchmarks
 
 ### Inference benchmarks
