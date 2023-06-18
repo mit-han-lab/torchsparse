@@ -30,7 +30,7 @@ We provide pre-built torchsparse v2.1.0 packages (recommended) with different Py
 1. Then the right TorchSparse wheel can be found and installed by running the installation script:
 
    ```bash
-   python -c "$(curl -fsSL https://raw.githubusercontent.com/mit-han-lab/torchsparse/main/install.py)"
+   python -c "$(curl -fsSL https://raw.githubusercontent.com/mit-han-lab/torchsparse/master/install.py)"
    ```
    
 
