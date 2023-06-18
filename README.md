@@ -1,87 +1,55 @@
-# TorchSparse
+# TorchSparse Introduction
 
-TorchSparse is a high-performance neural network library for point cloud processing.
+Point cloud computation has become an increasingly more important workload for autonomous driving and other applications. Unlike dense 2D computation, point cloud convolution has **sparse** and **irregular** computation patterns and thus requires dedicated inference system support with specialized high-performance kernels. While existing point cloud deep learning libraries have developed different dataflows for convolution on point clouds, they assume a single dataflow throughout the execution of the entire model. In this work, we systematically analyze and improve existing dataflows. Our resulting system, TorchSparse, achieves **2.9x**, **3.3x**, **2.2x** and **1.7x** measured end-to-end speedup on an NVIDIA A100 GPU over the state-of-the-art MinkowskiEngine, SpConv 1.2, TorchSparse (MLSys) and SpConv v2 in inference respectively. 
 
-### [website](http://torchsparse.mit.edu/) | [paper](https://arxiv.org/abs/2204.10319) | [presentation](https://www.youtube.com/watch?v=IIh4EwmcLUs)
+## Benchmarks
 
-## Installation
+### Inference benchmarks
 
-TorchSparse depends on the [Google Sparse Hash](https://github.com/sparsehash/sparsehash) library.
+![eval_benchmark.png](./docs/figs/eval_benchmark.png)
 
-- On Ubuntu, it can be installed by
+TorchSparse significantly outperforms existing point cloud inference engines in both 3D object detection and LiDAR segmentation benchmarks across three generations of GPU architecture (Pascal, Turing and Ampere)  and all precisions (FP16, TF32, FP32). It is up to **1.7x** faster than state-of-the-art SpConv 2.3.5 and is up to **2.2x** faster than  
+TorchSparse-MLsys on cloud GPUs. It also improves the latency of SpConv 2.3.5 by **1.25×** on Orin.
 
-  ```bash
-  sudo apt-get install libsparsehash-dev
-  ```
+### Training benchmarks
 
-- On Mac OS, it can be installed by
+![train_benchmark.png](./docs/figs/train_benchmark.png)
 
-  ```bash
-  brew install google-sparsehash
-  ```
+TorchSparse achieves superior mixed-precision training speed compared with MinkowskiEngine, TorchSparse-MLSys and SpConv 2.3.5. Specifically, it is **1.16x** faster on Tesla A100, **1.27x** faster on RTX 2080 Ti than state-of-the-art SpConv 2.3.5. It also significantly outperforms MinkowskiEngine by **4.6-4.8x*** across seven benchmarks on A100 and 2080 Ti. Measured with batch size = 2.
 
-- You can also compile the library locally (if you do not have the sudo permission) and add the library path to the environment variable `CPLUS_INCLUDE_PATH`.
 
-The latest released TorchSparse (v1.4.0) can then be installed by
+## Team
 
-```bash
-pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@v1.4.0
-```
+TorchSparse is developed by the following wonderful team:
 
-If you use TorchSparse in your code, please remember to specify the exact version in your dependencies.
+- [Haotian Tang](http://kentang.net): Ph.D. student (2020-) at MIT EECS, project lead, v2.0 and v2.1 lead;
+- [Shang Yang](http://ys-2020.github.io): Ph.D. student (2023-) at MIT EECS, project lead, v2.1 lead;
+- [Zhijian Liu](http://zhijianliu.com): Ph.D. student (2018-) at MIT EECS, project lead, v2.0 lead;
+- [Xiuyu Li](http://xiuyuli.com): Ph.D. student (2022-) at UC Berkeley EECS, v2.0 lead;
+- [Ke Hong](https://ieeexplore.ieee.org/author/37089419138): Graduate student (2021-) at Tsinghua University EE, v2.1 core developer, authored PCEngine kernels;
+- [Zhongming Yu](https://fishmingyu.github.io/): Ph.D. student (2022-) at UCSD CS, v2.1 core developer, authored PCEngine kernels;
+- [Yujun Lin](https://yujunlin.com/): Ph.D. student (2018-) at MIT EECS, v2.0 core developer;
+- [Guohao Dai](https://scholar.google.com/citations?user=gz3Tkl0AAAAJ&hl=en): Associate Professor at Shanghai Jiao Tong University, mentor of the project;
+- [Yu Wang](http://nicsefc.ee.tsinghua.edu.cn/): Professor at Tsinghua University, mentor of the project;
+- [Song Han](https://songhan.mit.edu): Associate Professor at MIT EECS, mentor of the project.
 
-For installation help and troubleshooting, please consult the [Frequently Asked Questions](./docs/FAQ.md) before posting an issue.
-
-## Benchmark
-
-We compare TorchSparse with [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine) (where the latency is measured on NVIDIA GTX 1080Ti):
-
-|                          | MinkowskiEngine v0.4.3 | TorchSparse v1.0.0 |
-| :----------------------- | :--------------------: | :----------------: |
-| MinkUNet18C (MACs / 10)  |        224.7 ms        |      124.3 ms      |
-| MinkUNet18C (MACs / 4)   |        244.3 ms        |      160.9 ms      |
-| MinkUNet18C (MACs / 2.5) |        269.6 ms        |      214.3 ms      |
-| MinkUNet18C              |        323.5 ms        |      294.0 ms      |
-
-## Getting Started
-
-### Sparse Tensor
-
-Sparse tensor (`SparseTensor`) is the main data structure for point cloud, which has two data fields:
-
-- Coordinates (`coords`): a 2D integer tensor with a shape of N x 4, where the first three dimensions correspond to quantized x, y, z coordinates, and the last dimension denotes the batch index.
-- Features (`feats`): a 2D tensor with a shape of N x C, where C is the number of feature channels.
-
-Most existing datasets provide raw point cloud data with float coordinates. We can use `sparse_quantize` (provided in `torchsparse.utils.quantize`) to voxelize x, y, z coordinates and remove duplicates:
-
-```python
-coords -= np.min(coords, axis=0, keepdims=True)
-coords, indices = sparse_quantize(coords, voxel_size, return_index=True)
-coords = torch.tensor(coords, dtype=torch.int)
-feats = torch.tensor(feats[indices], dtype=torch.float)
-tensor = SparseTensor(coords=coords, feats=feats)
-```
-
-We can then use `sparse_collate_fn` (provided in `torchsparse.utils.collate`) to assemble a batch of `SparseTensor`'s (and add the batch dimension to `coords`). Please refer to [this example](./examples/example.py) for more details.
-
-### Sparse Neural Network
-
-The neural network interface in TorchSparse is very similar to PyTorch:
-
-```python
-from torch import nn
-from torchsparse import nn as spnn
-
-model = nn.Sequential(
-    spnn.Conv3d(in_channels, out_channels, kernel_size),
-    spnn.BatchNorm(out_channels),
-    spnn.ReLU(True),
-)
-```
 
 ## Citation
 
-If you use TorchSparse in your research, please use the following BibTeX entries:
+If you use TorchSparse, please use the following BibTeX entries to cite:
+
+Preliminary version of TorchSparse++ (TorchSparse v2.1) is presented at CVPR Workshops 2023:
+
+```bibtex
+@inproceedings{tangandyang2023torchsparse++,
+  title = {{TorchSparse++: Efficient Point Cloud Engine}},
+  author = {Tang, Haotian and Yang, Shang and Liu, Zhijian and Hong, Ke and Yu, Zhongming and Li, Xiuyu and Dai, Guohao and Wang, Yu and Han, Song},
+  booktitle = {Computer Vision and Pattern Recognition Workshops (CVPRW)},
+  year = {2023}
+}
+```
+
+TorchSparse is presented at MLSys 2022:
 
 ```bibtex
 @inproceedings{tang2022torchsparse,
@@ -92,6 +60,8 @@ If you use TorchSparse in your research, please use the following BibTeX entries
 }
 ```
 
+Initial version of TorchSparse is part of the SPVNAS paper at ECCV 2020:
+
 ```bibtex
 @inproceedings{tang2020searching,
   title = {{Searching Efficient 3D Architectures with Sparse Point-Voxel Convolution}},
@@ -101,6 +71,19 @@ If you use TorchSparse in your research, please use the following BibTeX entries
 }
 ```
 
-## Acknowledgements
+PCEngine paper is accepted by MLSys 2023:
 
-TorchSparse is inspired by many existing open-source libraries, including (but not limited to) [MinkowskiEngine](https://github.com/NVIDIA/MinkowskiEngine), [SECOND](https://github.com/traveller59/second.pytorch) and [SparseConvNet](https://github.com/facebookresearch/SparseConvNet).
+```bibtex
+@inproceedings{hong2023pcengine,
+  title={{Exploiting Hardware Utilization and Adaptive Dataflow for Efficient Sparse Convolution in 3D Point Clouds}},
+  author={Hong, Ke and Yu, Zhongming and Dai, Guohao and Yang, Xinhao and Lian, Yaoxiu and Liu, Zehao and Xu, Ningyi and Wang, Yu},
+  booktitle={Sixth Conference on Machine Learning and Systems (MLSys)},
+  year={2023}
+}
+```
+
+## Acknowledgement
+
+We thank Yan Yan from TuSimple for helpful discussions.
+
+Please also have a look at the [dgSparse](https://dgsparse.github.io/) library, which is designed for fast and efficient sparse computation on graphs and point clouds. The work from PCEngine (MLSys 2023) team is also highly related to us. 
