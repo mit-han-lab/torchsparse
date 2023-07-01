@@ -99,13 +99,7 @@ if __name__ == '__main__':
     model.eval()
     # enable fused and locality-aware memory access optimization
     torchsparse.backends.benchmark = True  # type: ignore
-    # enable adaptive grouping optimization
-    torchsparse.tune(
-        model=model,
-        data_loader=dataflow,
-        n_samples=10,
-        collect_fn=lambda data: data['input'],
-    )
+    
     with torch.no_grad():
         for k, feed_dict in enumerate(dataflow):
             inputs = feed_dict['input'].to(device=args.device).half()
