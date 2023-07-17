@@ -10,6 +10,8 @@ from torchsparse.utils.quantize import sparse_quantize
 @torch.no_grad()
 def main() -> None:
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    from torchsparse.nn import functional as F
+    F.set_kmap_mode('hashmap')
 
     for backbone in [SparseResNet21D, SparseResUNet42]:
         print(f'{backbone.__name__}:')
@@ -23,8 +25,8 @@ def main() -> None:
         pcs -= np.min(pcs, axis=0, keepdims=True)
         pcs, indices = sparse_quantize(pcs, voxel_size, return_index=True)
         coords = np.zeros((pcs.shape[0], 4))
-        coords[:, :3] = pcs[:, :3]
-        coords[:, -1] = 0
+        coords[:, 1:4] = pcs[:, :3]
+        coords[:, 0] = 0
         coords = torch.as_tensor(coords, dtype=torch.int)
         feats = torch.as_tensor(feats[indices], dtype=torch.float)
         input = SparseTensor(coords=coords, feats=feats).to(device)
