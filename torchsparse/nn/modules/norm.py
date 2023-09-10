@@ -18,7 +18,7 @@ class GroupNorm(nn.GroupNorm):
     def forward(self, input: SparseTensor) -> SparseTensor:
         coords, feats, stride = input.coords, input.feats, input.stride
 
-        batch_size = torch.max(coords[:, -1]).item() + 1
+        batch_size = torch.max(coords[:, 0]).item() + 1
         num_channels = feats.shape[1]
 
         # PyTorch's GroupNorm function expects the input to be in (N, C, *)
