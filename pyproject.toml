@@ -2,13 +2,11 @@
 # require this package, just to reduce the chance of version
 # inconsistencies.
 
-[build-system]
-
-
 [[tool.pdm.source]]
 url = "https://download.pytorch.org/whl/cu117/torch"
 verify_ssl = true
 name = "torch-cu117"
 type = "find-links"
 
+[build-system]
 requires = ["torch==2.0.0+cu117", "tqdm", "numpy", "setuptools"]
