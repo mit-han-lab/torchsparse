@@ -6,3 +6,4 @@ cd ../python
 source /opt/conda/bin/activate sparse
 
 python data_proccessing.py
+python traintestsplit.py

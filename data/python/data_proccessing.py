@@ -1,17 +1,6 @@
-import random
 import h5py
 import numpy as np
-import tqdm
-import matplotlib.pyplot as plt
-from mpl_toolkits import mplot3d
-from sklearn.preprocessing import StandardScaler
-import math
-import random
-import copy
 import os.path
-
-from torch.utils.data import Dataset, DataLoader
-import argparse
 
 def minmax(input_list):
     """
@@ -65,7 +54,7 @@ if __name__ == '__main__':
     # **only doing this if the file doens't exist already, as the conversion takes a while**
     if not os.path.exists('../mg22simulated/' + file_name + '.npy'):
         event_data = np.zeros((original_length, np.max(event_lens), 13), float) 
-        for n in tqdm.tqdm(range(len(original_keys))):
+        for n in range(len(original_keys)):
             name = original_keys[n]
             event = file[name]
             ev_len = len(event)
@@ -78,26 +67,9 @@ if __name__ == '__main__':
     
     data = np.load( '../mg22simulated/' + ISOTOPE + '_w_key_index' + '.npy')
     
-    # code written by Ian Heung
-    x = []
-    y = []
-    z = []
-    t = []
-    amp = []
-    track_id = []
-    
-    for event in range(len(data)):
-        for detection in data[event]:
-            if not(detection[0] == 0. and detection[1] == 0. and detection[2] == 0. and detection[3] == 0. and detection[4] == 0.):
-                x.append(detection[0])
-                y.append(detection[1])
-                z.append(detection[2])
-                t.append(detection[3])
-                amp.append(detection[4])
-                track_id.append(detection[5])
-    
-    EVENTS = 10000 # total number of events
-    DETECTIONS = 1476 # total number of detections per event (even the empty detections)
+    # code written by Ian Heung    
+    EVENTS = len(data) # total number of events
+    DETECTIONS = len(data[0]) # total number of detections per event (even the empty detections)
     
     x_array = np.zeros((EVENTS, DETECTIONS))
     y_array = np.zeros((EVENTS, DETECTIONS))
@@ -113,13 +85,35 @@ if __name__ == '__main__':
             amp_array[event][detection] = data[event][detection][4]
             track_id_array[event][detection] = data[event][detection][5]
     
+    x = []
+    y = []
+    z = []
+    t = []
+    amp = []
+    
+    for event in range(EVENTS):
+        for detection in data[event]:
+            if not(detection[0] == 0. and detection[1] == 0. and detection[2] == 0. and detection[3] == 0. and detection[4] == 0.):
+                x.append(detection[0])
+                y.append(detection[1])
+                z.append(detection[2])
+                t.append(detection[3])
+                amp.append(detection[4])
+    
     x_min, x_max = minmax(x)
     y_min, y_max = minmax(y)
     z_min, z_max = minmax(z)
     
     x_fit = linearfit(x_array, x_min, x_max, 0, 499).astype(int)
     y_fit = linearfit(y_array, y_min, y_max, 0, 499).astype(int)
-    z_fit = linearfit(z_array, z_min, z_max, 0, 499).astype(int) 
+    z_fit = linearfit(z_array, z_min, z_max, 0, 499).astype(int)
+
+    amp = np.array(amp)
+    amp_mean = amp.mean()
+    amp_stdev = amp.std()
+    
+    # Perform z-score normalization
+    amp_array = (amp_array - amp_mean) / amp_stdev
     
     total_coords = np.stack((x_fit, y_fit, z_fit), axis=-1)
     total_features = amp_array.reshape(10000, 1476, 1)
@@ -129,3 +123,5 @@ if __name__ == '__main__':
     np.save('../mg22simulated/' + ISOTOPE + "_coords.npy", total_coords)
     np.save('../mg22simulated/' + ISOTOPE + "_feats.npy", total_features)
     np.save('../mg22simulated/' + ISOTOPE + "_labels.npy", total_labels)
+    
+    print("data_processing.py: Successful")
