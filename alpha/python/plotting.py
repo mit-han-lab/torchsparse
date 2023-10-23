@@ -1,14 +1,15 @@
 import sys
 import matplotlib.pyplot as plt
 import os
+import click
 import numpy as np
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        datetime_str = sys.argv[1]
-        print(f"Received datetime: {datetime_str}")
-    else:
-        print("No datetime argument provided!")
+@click.command()
+@click.argument('current_datetime', type=str, required=True)
+
+def plotting(current_datetime):
+    datetime_str = current_datetime
+    print(f"Received datetime: {datetime_str}")
     
     LOSS_PATH = f"../training/{datetime_str}/loss_data/"
     
@@ -39,3 +40,6 @@ if __name__ == '__main__':
     output_filename = f"loss_plot_{datetime_str}.png"
     plt.savefig(PLOT_PATH + output_filename, dpi=300)
     print(f"Plot saved as {output_filename}")
+
+if __name__ == '__main__':
+    plotting()
