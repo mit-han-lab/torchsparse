@@ -1,30 +1,23 @@
-import h5py
+import os
+import sys
+import datetime
 import numpy as np
+import click
+
+import h5py
 import tqdm
+import torch
+import torchsparse
+from torch import nn
+from torch.utils.data import Dataset, DataLoader
+from torch.cuda import amp
+from torchsparse import SparseTensor, nn as spnn
+from torchsparse.utils.collate import sparse_collate
+from sklearn.metrics import confusion_matrix
+
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 from sklearn.preprocessing import StandardScaler
-import copy
-
-import os
-from torch.utils.data import Dataset, DataLoader
-import argparse
-
-import torch
-import torch.utils.data
-from torch import nn
-from torch.cuda import amp
-    
-import torchsparse
-from torchsparse import SparseTensor
-from torchsparse import nn as spnn
-from torchsparse.utils.collate import sparse_collate, sparse_collate_fn
-from torchsparse.utils.quantize import sparse_quantize
-from torch.cuda import amp
-from typing import Any, Dict
-from sklearn.metrics import confusion_matrix
-import datetime
-import sys
 
 class CustomDataset(Dataset):
     def __init__(self, coords, feats, labels):
@@ -41,20 +34,22 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         return self.coords[idx], self.feats[idx], self.labels[idx]
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        datetime_str = sys.argv[1]
-        print(f"Received datetime: {datetime_str}")
-    else:
-        print("No datetime argument provided!")
+@click.command()
+@click.argument('current_datetime', type=str, required=True)
+@click.argument('loadfrom', type=str, required=True)
+@click.argument('iso', type=str, required=True)
+
+def training(current_datetime, loadfrom, iso):
+    datetime_str = current_datetime
+    print(f"Received datetime: {datetime_str}")
     
-    ISOTOPE = "Mg22"
-    coords_train = np.load('../mg22simulated/' + ISOTOPE + "_coords_train.npy")
-    coords_val = np.load('../mg22simulated/' + ISOTOPE + "_coords_val.npy")
-    feats_train = np.load('../mg22simulated/' + ISOTOPE + "_feats_train.npy")
-    feats_val = np.load('../mg22simulated/' + ISOTOPE + "_feats_val.npy")
-    labels_train = np.load('../mg22simulated/' + ISOTOPE + "_labels_train.npy")
-    labels_val = np.load('../mg22simulated/' + ISOTOPE + "_labels_val.npy")
+    ISOTOPE = iso
+    coords_train = np.load(loadfrom + ISOTOPE + "_coords_train.npy")
+    coords_val = np.load(loadfrom + ISOTOPE + "_coords_val.npy")
+    feats_train = np.load(loadfrom + ISOTOPE + "_feats_train.npy")
+    feats_val = np.load(loadfrom + ISOTOPE + "_feats_val.npy")
+    labels_train = np.load(loadfrom + ISOTOPE + "_labels_train.npy")
+    labels_val = np.load(loadfrom + ISOTOPE + "_labels_val.npy")
     
     
     coords_train = coords_train[0:100]
@@ -184,3 +179,6 @@ if __name__ == '__main__':
     np.save(LOSS_PATH + v_filename, validation_losses)
     
     print('Finished Training')
+
+if __name__ == '__main__':
+    training()

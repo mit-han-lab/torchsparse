@@ -1,3 +1,7 @@
+# Particle Track Classification Using 3D Sparse Tensor Networks
+
+The following repository is forked from the TorchSparse repository. The work done by ALPhA is inside the ALPhA folder. 
+
 # TorchSparse
 
 TorchSparse is a high-performance neural network library for point cloud processing.
