@@ -99,6 +99,17 @@ TorchSparse is developed by the following wonderful team:
 
 If you use TorchSparse, please use the following BibTeX entries to cite:
 
+TorchSparse++ (TorchSparse v2.1) is presented at MICRO 2023:
+
+```bibtex
+@inproceedings{tangandyang2023torchsparse,  
+  title={TorchSparse++: Efficient Training and Inference Framework for Sparse Convolution on GPUs},  
+  author={Tang, Haotian and Yang, Shang and Liu, Zhijian and Hong, Ke and Yu, Zhongming and Li, Xiuyu and Dai, Guohao and Wang, Yu and Han, Song},  
+  booktitle={IEEE/ACM International Symposium on Microarchitecture (MICRO)},  
+  year={2023}
+}
+```
+
 Preliminary version of TorchSparse++ (TorchSparse v2.1) is presented at CVPR Workshops 2023:
 
 ```bibtex
