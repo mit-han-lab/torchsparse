@@ -1,3 +1,14 @@
+/*
+Please consider citing the following paper when using the code:
+
+@inproceedings{hong2023pcengine,
+  title={{Exploiting Hardware Utilization and Adaptive Dataflow for Efficient Sparse Convolution in 3D Point Clouds}},
+  author={Hong, Ke and Yu, Zhongming and Dai, Guohao and Yang, Xinhao and Lian, Yaoxiu and Liu, Zehao and Xu, Ningyi and Wang, Yu},
+  booktitle={Sixth Conference on Machine Learning and Systems (MLSys)},
+  year={2023}
+}
+*/
+
 #pragma once
 
 #include <torch/torch.h>
