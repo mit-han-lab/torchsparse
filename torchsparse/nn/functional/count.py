@@ -2,14 +2,14 @@ import torch
 
 import torchsparse.backend
 
-__all__ = ['spcount']
+__all__ = ["spcount"]
 
 
 def spcount(coords: torch.Tensor, num: torch.Tensor) -> torch.Tensor:
     coords = coords.contiguous()
-    if coords.device.type == 'cuda':
+    if coords.device.type == "cuda":
         return torchsparse.backend.count_cuda(coords, num)
-    elif coords.device.type == 'cpu':
+    elif coords.device.type == "cpu":
         return torchsparse.backend.count_cpu(coords, num)
     else:
         device = coords.device

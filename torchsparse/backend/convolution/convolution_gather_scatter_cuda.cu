@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <chrono>
 
-#include "convolution_cuda.h"
+#include "convolution_gather_scatter_cuda.h"
 
 #define CONVERT_FLOAT(pointer) (reinterpret_cast<float *>(&(pointer))[0])
 #define CONVERT_HALF2(pointer) (reinterpret_cast<half2 *>(&(pointer))[0])
@@ -276,7 +276,7 @@ __global__ void scatter_all_kernel_pad_sep_with_mask_float(
 //                         fused gather-scatter and matmul grouping. Kernel
 //                         reordering should be done in piror steps for
 //                         grouping to function properly
-at::Tensor convolution_forward_cuda(
+at::Tensor conv_forward_gather_scatter_cuda(
     at::Tensor in_feat, at::Tensor kernel, at::Tensor neighbor_map,
     at::Tensor neighbor_offset, at::Tensor input_mask, at::Tensor output_mask,
     const int output_size, const float epsilon, const int mm_thresh,
@@ -288,7 +288,7 @@ at::Tensor convolution_forward_cuda(
   // not take into consideration padding!
   // if(1){
   if (conv_mode == 0) {
-    return convolution_forward_cuda_fallback(in_feat, kernel, neighbor_map,
+    return conv_forward_gather_scatter_cuda_fallback(in_feat, kernel, neighbor_map,
                                              output_size, conv_mode,
                                              neighbor_offset, transpose);
   } else if (buffer_size * (in_feat.size(1) + kernel.size(-1)) >
@@ -297,14 +297,14 @@ at::Tensor convolution_forward_cuda(
     // std::cout << "fallback: " << buffer_size * (in_feat.size(1) +
     // out_feat.size(1)) << " " << global_buffer.size(0) << std::endl;
     //  global buffer not large enough, fall back
-    return convolution_forward_cuda_fallback(in_feat, kernel, neighbor_map,
+    return conv_forward_gather_scatter_cuda_fallback(in_feat, kernel, neighbor_map,
                                              output_size, conv_mode,
                                              neighbor_offset, transpose);
   } else {
     // std::cout << "not fallback: " << buffer_size * (in_feat.size(1) +
     // out_feat.size(1)) << " " << global_buffer.size(0) << std::endl;
     //  global buffer large enough, do all gather / all scatter
-    return convolution_forward_cuda_latest(
+    return conv_forward_gather_scatter_cuda_latest(
         in_feat, kernel, neighbor_map, neighbor_offset, input_mask, output_mask,
         output_size, epsilon, mm_thresh, conv_mode, transpose, global_buffer);
   }
@@ -407,7 +407,7 @@ void group_strategy_generation(
   }
 }
 
-at::Tensor convolution_forward_cuda_latest(
+at::Tensor conv_forward_gather_scatter_cuda_latest(
     at::Tensor in_feat, at::Tensor _kernel, at::Tensor neighbor_map,
     at::Tensor neighbor_offset, at::Tensor input_mask, at::Tensor output_mask,
     const int output_size, const float epsilon, const int mm_thresh,
@@ -547,7 +547,7 @@ at::Tensor convolution_forward_cuda_latest(
 
   // all gather
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-      in_feat.type(), "convolution_forward_cuda", ([&] {
+      in_feat.type(), "conv_forward_gather_scatter_cuda", ([&] {
         gather_all_kernel_pad_sep_with_mask<scalar_t>
             <<<ceil((double)(n_in_feats * n_in_channels) /
                     (256 << (sizeof(scalar_t) == 2) + 2)),
@@ -678,7 +678,7 @@ at::Tensor convolution_forward_cuda_latest(
   return out_feat;
 }
 
-at::Tensor convolution_forward_cuda_fallback(
+at::Tensor conv_forward_gather_scatter_cuda_fallback(
     at::Tensor in_feat, at::Tensor kernel, at::Tensor neighbor_map,
     const int output_size, const int conv_mode, at::Tensor neighbor_offset,
     const bool transpose) {
@@ -779,7 +779,7 @@ at::Tensor convolution_forward_cuda_fallback(
     // gather n_active_feats dense features from N sparse input features with c
     // feature dimensions
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-        in_feat.type(), "convolution_forward_cuda", ([&] {
+        in_feat.type(), "conv_forward_gather_scatter_cuda", ([&] {
           gather_kernel<scalar_t>
               <<<ceil((double)(n_active_feats * n_in_channels) / 256), 256>>>(
                   n_active_feats, n_in_feats, n_in_channels,
@@ -796,7 +796,7 @@ at::Tensor convolution_forward_cuda_fallback(
     // scatter n_active_feats dense features into n_out_feats output features of
     // dimension n_out_channels
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-        in_feat.type(), "convolution_forward_cuda", ([&] {
+        in_feat.type(), "conv_forward_gather_scatter_cuda", ([&] {
           scatter_kernel<scalar_t>
               <<<ceil((double)(n_active_feats * n_out_channels) / 256), 256>>>(
                   n_active_feats, n_out_feats, n_out_channels,
@@ -812,7 +812,7 @@ at::Tensor convolution_forward_cuda_fallback(
   }
   return out_feat;
 }
-void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
+void conv_backward_gather_scatter_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
                                at::Tensor grad_out_feat, at::Tensor kernel,
                                at::Tensor grad_kernel, at::Tensor neighbor_map,
                                at::Tensor neighbor_offset,
@@ -877,7 +877,7 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
     }
     // gather
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-        in_feat.type(), "convolution_forward_cuda", ([&] {
+        in_feat.type(), "conv_forward_gather_scatter_cuda", ([&] {
           gather_kernel<scalar_t>
               <<<ceil((double)(n_active_feats * n_out_channels) / 256), 256>>>(
                   n_active_feats, n_out_feats, n_out_channels,
@@ -886,7 +886,7 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
                   neighbor_map.data_ptr<int>() + cur_offset, !transpose);
         }));
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-        in_feat.type(), "convolution_forward_cuda", ([&] {
+        in_feat.type(), "conv_forward_gather_scatter_cuda", ([&] {
           gather_kernel<scalar_t>
               <<<ceil((double)(n_active_feats * n_in_channels) / 256), 256>>>(
                   n_active_feats, n_in_feats, n_in_channels,
@@ -902,7 +902,7 @@ void convolution_backward_cuda(at::Tensor in_feat, at::Tensor grad_in_feat,
                   out_grad_buffer_activated);
     // scatter
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-        in_feat.type(), "convolution_forward_cuda", ([&] {
+        in_feat.type(), "conv_forward_gather_scatter_cuda", ([&] {
           scatter_kernel<scalar_t>
               <<<ceil((double)(n_active_feats * n_in_channels) / 256), 256>>>(
                   n_active_feats, n_in_feats, n_in_channels,

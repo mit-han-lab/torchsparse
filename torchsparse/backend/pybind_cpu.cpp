@@ -2,7 +2,7 @@
 #include <torch/extension.h>
 #include <torch/serialize/tensor.h>
 
-#include "convolution/convolution_cpu.h"
+#include "convolution/convolution_gather_scatter_cpu.h"
 #include "devoxelize/devoxelize_cpu.h"
 #include "hash/hash_cpu.h"
 #include "others/count_cpu.h"
@@ -10,8 +10,8 @@
 #include "voxelize/voxelize_cpu.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("convolution_forward_cpu", &convolution_forward_cpu);
-  m.def("convolution_backward_cpu", &convolution_backward_cpu);
+  m.def("conv_forward_gather_scatter_cpu", &conv_forward_gather_scatter_cpu);
+  m.def("conv_backward_gather_scatter_cpu", &conv_backward_gather_scatter_cpu);
   m.def("voxelize_forward_cpu", &voxelize_forward_cpu);
   m.def("voxelize_backward_cpu", &voxelize_backward_cpu);
   m.def("devoxelize_forward_cpu", &devoxelize_forward_cpu);
