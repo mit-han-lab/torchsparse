@@ -9,12 +9,13 @@ from torchsparse.utils.quantize import sparse_quantize
 
 @torch.no_grad()
 def main() -> None:
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     from torchsparse.nn import functional as F
-    F.set_kmap_mode('hashmap')
+
+    F.set_kmap_mode("hashmap")
 
     for backbone in [SparseResNet21D, SparseResUNet42]:
-        print(f'{backbone.__name__}:')
+        print(f"{backbone.__name__}:")
         model: nn.Module = backbone(in_channels=4, width_multiplier=1.0)
         model = model.to(device).eval()
 
@@ -36,8 +37,8 @@ def main() -> None:
 
         # print feature shapes
         for k, output in enumerate(outputs):
-            print(f'output[{k}].F.shape = {output.feats.shape}')
+            print(f"output[{k}].F.shape = {output.feats.shape}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

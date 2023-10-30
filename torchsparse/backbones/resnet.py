@@ -6,15 +6,15 @@ from torchsparse import SparseTensor
 
 from .modules import SparseConvBlock, SparseResBlock
 
-__all__ = ['SparseResNet21D']
+__all__ = ["SparseResNet21D"]
 
 
 class SparseResNet(nn.ModuleList):
-
     def __init__(
         self,
-        blocks: List[Tuple[int, int, Union[int, Tuple[int, ...]],
-                           Union[int, Tuple[int, ...]]]],
+        blocks: List[
+            Tuple[int, int, Union[int, Tuple[int, ...]], Union[int, Tuple[int, ...]]]
+        ],
         *,
         in_channels: int = 4,
         width_multiplier: float = 1.0,
@@ -35,14 +35,16 @@ class SparseResNet(nn.ModuleList):
                             out_channels,
                             kernel_size,
                             stride=stride,
-                        ))
+                        )
+                    )
                 else:
                     blocks.append(
                         SparseResBlock(
                             in_channels,
                             out_channels,
                             kernel_size,
-                        ))
+                        )
+                    )
                 in_channels = out_channels
             self.append(nn.Sequential(*blocks))
 
@@ -55,7 +57,6 @@ class SparseResNet(nn.ModuleList):
 
 
 class SparseResNet21D(SparseResNet):
-
     def __init__(self, **kwargs) -> None:
         super().__init__(
             blocks=[

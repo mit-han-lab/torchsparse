@@ -4,7 +4,6 @@
 
 #include <cmath>
 #include <vector>
-
 // hashing
 // input N*4 int32 tensor output N*1 int64 tensor
 __global__ void hash_kernel(int N, const int *__restrict__ data,
@@ -17,7 +16,7 @@ __global__ void hash_kernel(int N, const int *__restrict__ data,
       hash ^= (unsigned int)data[j];
       hash *= 1099511628211UL;
     }
-    hash = (hash >> 60) ^ (hash & 0xFFFFFFFFFFFFFFF);
+    // hash = (hash >> 60) ^ (hash & 0xFFFFFFFFFFFFFFF);
     out[i] = hash;
   }
 }
@@ -40,16 +39,16 @@ __global__ void kernel_hash_kernel(int N, int K, const int *__restrict__ data,
   int cur_coord[4];
   if (i < N) {
     data += i * 4;
-    for (int j = 0; j < 3; j++) {
-      cur_coord[j] = data[j] + kernel_offset[k * 3 + j];
+    for (int j = 1; j < 4; j++) {
+      cur_coord[j] = data[j] + kernel_offset[k * 3 + j - 1];
     }
-    cur_coord[3] = data[3];
+    cur_coord[0] = data[0];
     uint64_t hash = 14695981039346656037UL;
     for (int j = 0; j < 4; j++) {
       hash ^= (unsigned int)cur_coord[j];
       hash *= 1099511628211UL;
     }
-    hash = (hash >> 60) ^ (hash & 0xFFFFFFFFFFFFFFF);
+    // hash = (hash >> 60) ^ (hash & 0xFFFFFFFFFFFFFFF);
     out[k * N + i] = hash;
   }
 }

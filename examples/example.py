@@ -11,12 +11,12 @@ from torch.cuda import amp
 import torchsparse
 from torchsparse import SparseTensor
 from torchsparse import nn as spnn
+from torchsparse.nn import functional as F
 from torchsparse.utils.collate import sparse_collate_fn
 from torchsparse.utils.quantize import sparse_quantize
 
 
 class RandomDataset:
-
     def __init__(self, input_size: int, voxel_size: float) -> None:
         self.input_size = input_size
         self.voxel_size = voxel_size
@@ -27,9 +27,7 @@ class RandomDataset:
 
         coords, feats = inputs[:, :3], inputs
         coords -= np.min(coords, axis=0, keepdims=True)
-        coords, indices = sparse_quantize(coords,
-                                          self.voxel_size,
-                                          return_index=True)
+        coords, indices = sparse_quantize(coords, self.voxel_size, return_index=True)
 
         coords = torch.tensor(coords, dtype=torch.int)
         feats = torch.tensor(feats[indices], dtype=torch.float)
@@ -37,16 +35,20 @@ class RandomDataset:
 
         input = SparseTensor(coords=coords, feats=feats)
         label = SparseTensor(coords=coords, feats=labels)
-        return {'input': input, 'label': label}
+        return {"input": input, "label": label}
 
     def __len__(self):
         return 100
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    conv_config = F.get_default_conv_config()
+    # conv_config.dataflow = F.Dataflow.GatherScatter
+    F.set_global_conv_config(conv_config)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--device', type=str, default='cuda')
-    parser.add_argument('--amp_enabled', action='store_true')
+    parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--amp_enabled", action="store_true")
     args = parser.parse_args()
 
     random.seed(0)
@@ -81,14 +83,14 @@ if __name__ == '__main__':
     scaler = amp.GradScaler(enabled=args.amp_enabled)
 
     for k, feed_dict in enumerate(dataflow):
-        inputs = feed_dict['input'].to(device=args.device)
-        labels = feed_dict['label'].to(device=args.device)
+        inputs = feed_dict["input"].to(device=args.device)
+        labels = feed_dict["label"].to(device=args.device)
 
         with amp.autocast(enabled=args.amp_enabled):
             outputs = model(inputs)
             loss = criterion(outputs.feats, labels.feats)
 
-        print(f'[step {k + 1}] loss = {loss.item()}')
+        print(f"[step {k + 1}] loss = {loss.item()}")
 
         optimizer.zero_grad()
         scaler.scale(loss).backward()
@@ -99,14 +101,14 @@ if __name__ == '__main__':
     model.eval()
     # enable fused and locality-aware memory access optimization
     torchsparse.backends.benchmark = True  # type: ignore
-    
+
     with torch.no_grad():
         for k, feed_dict in enumerate(dataflow):
-            inputs = feed_dict['input'].to(device=args.device).half()
-            labels = feed_dict['label'].to(device=args.device)
+            inputs = feed_dict["input"].to(device=args.device).half()
+            labels = feed_dict["label"].to(device=args.device)
 
             with amp.autocast(enabled=True):
                 outputs = model(inputs)
                 loss = criterion(outputs.feats, labels.feats)
 
-            print(f'[inference step {k + 1}] loss = {loss.item()}')
+            print(f"[inference step {k + 1}] loss = {loss.item()}")
