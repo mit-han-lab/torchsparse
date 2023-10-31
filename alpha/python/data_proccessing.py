@@ -87,7 +87,7 @@ def process_data(loadfrom, iso, h5):
     amp_mean = amp.mean()
     amp_stdev = amp.std()
     
-    # Perform z-score normalization on featuresc
+    # Perform z-score normalization on features
     amp_array = (amp_array - amp_mean) / amp_stdev
     
     total_coords = np.stack((x_fit, y_fit, z_fit), axis=-1)
