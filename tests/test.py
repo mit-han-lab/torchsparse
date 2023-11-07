@@ -25,9 +25,9 @@ class SparseConvTestCase(unittest.TestCase):
                 count += 1
 
         # switch to hashmap_on_the_fly
-        config = F.get_default_conv_config()
+        config = F.conv_config.get_default_conv_config()
         config.kmap_mode = "hashmap_on_the_fly"
-        F.set_global_conv_config(config)
+        F.conv_config.set_global_conv_config(config)
         for kernel_size in kernel_sizes:
             for stride in strides:
                 mean_adiff, max_rdiff = test_single_layer_convolution_forward(

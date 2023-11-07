@@ -9,7 +9,7 @@ from torchsparse import nn as spnn
 from torchsparse.nn import functional as F
 from torchsparse.utils import make_ntuple
 
-from test_utils import *
+from .test_utils import *
 
 __all__ = ["test_single_layer_convolution_forward"]
 
