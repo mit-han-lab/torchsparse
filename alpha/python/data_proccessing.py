@@ -38,89 +38,58 @@ def process_data(loadfrom, iso, h5):
                 event_data[n][i][-1] = float(n) #insert index value to find corresponding event ID
         np.save(LOADFROM + file_name, event_data)
     
-    
     data = np.load(LOADFROM + ISOTOPE + '_w_key_index' + '.npy')
-    
-    # code written by Ian Heung    
-    EVENTS = len(data) # total number of events
-    DETECTIONS = len(data[0]) # total number of detections per event (even the empty detections)
+        
+    sliced_data = data[:, :, [0, 1, 2, 4, 5]]
 
-    # initialize empty arrays
-    x_array = np.zeros((EVENTS, DETECTIONS))
-    y_array = np.zeros((EVENTS, DETECTIONS))
-    z_array = np.zeros((EVENTS, DETECTIONS))
-    amp_array = np.zeros((EVENTS, DETECTIONS))
-    track_id_array = np.zeros((EVENTS, DETECTIONS))
+    LENEVTS = len(sliced_data) # number of events (10000)
+    LENDETS = len(sliced_data[0]) # number of detections (1476)
+    NUMCLASSES = 5 # x, y, z, amp, track_id
+    cutoff = 70 # discard events with less than 70 detections
+    newLen = np.sum(event_lens > 70)
+    
+    new_data = np.zeros((newLen, LENDETS, NUMCLASSES), float)
+    new_data_index = 0
+    
+    for i in range(LENEVTS):
+        if event_lens[i] > 70:
+            new_data[new_data_index] = sliced_data[i] 
+            new_data_index += 1
 
-    # populate arrays
-    for event in range(EVENTS):
-        for detection in range(DETECTIONS):
-            x_array[event][detection] = data[event][detection][0]
-            y_array[event][detection] = data[event][detection][1]
-            z_array[event][detection] = data[event][detection][2]
-            amp_array[event][detection] = data[event][detection][4]
-            track_id_array[event][detection] = data[event][detection][5]
+    # mins and max
+    # Min values for x, y, z, amp: [-250.32000732 -252.37495422  -56.]
+    # Max values for x, y, z, amp: [  250.32003784   252.37495422   894.4]
+    mins = new_data[:, :, :3].min(axis=(0, 1))
+    maxs = new_data[:, :, :3].max(axis=(0, 1))
 
-    # create lists to 
-    x = []
-    y = []
-    z = []
-    amp = []
-    
-    for event in range(EVENTS):
-        for detection in data[event]:
-            if not(detection[0] == 0. and detection[1] == 0. and detection[2] == 0. and detection[3] == 0. and detection[4] == 0.):
-                x.append(detection[0])
-                y.append(detection[1])
-                z.append(detection[2])
-                amp.append(detection[4])
-    
-    x_min, x_max = minmax(x)
-    y_min, y_max = minmax(y)
-    z_min, z_max = minmax(z)
-    
-    x_fit = linearfit(x_array, x_min, x_max, 0, 499).astype(int)
-    y_fit = linearfit(y_array, y_min, y_max, 0, 499).astype(int)
-    z_fit = linearfit(z_array, z_min, z_max, 0, 499).astype(int)
+    # slice the new_data array so we can voxelize x, y, z
+    x_slice, y_slice, z_slice, amp_slice, track_slice = [new_data[:, :, i:i+1] for i in range(5)]
 
-    amp = np.array(amp)
-    amp_mean = amp.mean()
-    amp_stdev = amp.std()
+    x_voxel = linearfit(x_slice, mins[0], maxs[0], 0, 500).astype(int)
+    y_voxel = linearfit(y_slice, mins[1], maxs[1], 0, 500).astype(int)
+    z_voxel = linearfit(z_slice, mins[2], maxs[2], 0, 900).astype(int)
+
+    # z-score normalization on the amp
+    non_zero_amp_slice = amp_slice[amp_slice != 0] # do not include 0s in the mean and std dev calculation
+    mean_non_zero = non_zero_amp_slice.mean()
+    std_dev_non_zero = non_zero_amp_slice.std()
+    normalized_amp = (amp_slice - mean_non_zero) / std_dev_non_zero
+
+    voxel_data = np.concatenate((x_voxel, y_voxel, z_voxel), axis=2)
+    features = np.concatenate((voxel_data, normalized_amp), axis=2)
     
-    # Perform z-score normalization on features
-    amp_array = (amp_array - amp_mean) / amp_stdev
-    
-    total_coords = np.stack((x_fit, y_fit, z_fit), axis=-1)
-    total_features = amp_array.reshape(10000, 1476, 1)
-    total_features = np.concatenate((total_coords, total_features), axis=2)
-    total_labels = track_id_array.reshape(10000, 1476, 1)
-    
-    np.save(LOADFROM + ISOTOPE + "_coords.npy", total_coords)
-    np.save(LOADFROM + ISOTOPE + "_feats.npy", total_features)
-    np.save(LOADFROM + ISOTOPE + "_labels.npy", total_labels)
+    np.save(LOADFROM + ISOTOPE + "_coords.npy", voxel_data)
+    np.save(LOADFROM + ISOTOPE + "_feats.npy", features)
+    np.save(LOADFROM + ISOTOPE + "_labels.npy", track_slice)
 
     print("Coords Shape: ", end="")
-    print(total_coords.shape)
+    print(voxel_data.shape)
     print("Feats Shape: ", end="")
-    print(total_features.shape)
+    print(features.shape)
     print("Labels Shape: ", end="")
-    print(total_labels.shape)
+    print(track_slice.shape)
     
     print("data_processing.py: Successful")
-
-def minmax(input_list):
-    """
-    Compute the minimum and maximum values of a list.
-
-    Args:
-        input_list (list): A list of numeric values.
-
-    Returns:
-        tuple: A tuple containing two values - the minimum and maximum values in the input list.
-    """
-    mn = min(input_list)
-    mx = max(input_list)
-    return mn, mx
 
 def linearfit(x, min_orig, max_orig, min_desired, max_desired):
     """
@@ -136,7 +105,12 @@ def linearfit(x, min_orig, max_orig, min_desired, max_desired):
     Returns:
         numpy.ndarray: A NumPy array containing scaled values within the desired range.
     """
-    return ((x - min_orig) / (max_orig - min_orig)) * (max_desired - min_desired) + min_desired
+    linfit = np.copy(x)
+    
+    # Apply linear scaling only to non-zero elements
+    non_zero_mask = x != 0
+    linfit[non_zero_mask] = ((x[non_zero_mask] - min_orig) / (max_orig - min_orig)) * (max_desired - min_desired) + min_desired
+    return linfit
 
 if __name__ == '__main__':
     process_data()

@@ -21,9 +21,6 @@ from sklearn.preprocessing import StandardScaler
 
 class CustomDataset(Dataset):
     def __init__(self, coords, feats, labels):
-        coords = torch.tensor(coords, dtype=torch.int)
-        feats = torch.tensor(feats, dtype=torch.float)
-        labels = torch.tensor(labels, dtype=torch.long)
         self.coords = coords
         self.feats = feats
         self.labels = labels
@@ -33,7 +30,7 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.coords[idx], self.feats[idx], self.labels[idx]
-
+        
 @click.command()
 @click.argument('current_datetime', type=str, required=True)
 @click.argument('loadfrom', type=str, required=True)
@@ -50,17 +47,6 @@ def training(current_datetime, loadfrom, iso):
     feats_val = np.load(loadfrom + ISOTOPE + "_feats_val.npy")
     labels_train = np.load(loadfrom + ISOTOPE + "_labels_train.npy")
     labels_val = np.load(loadfrom + ISOTOPE + "_labels_val.npy")
-    
-    
-    coords_train = coords_train[0:100]
-    feats_train = feats_train[0:100]
-    labels_train = labels_train[0:100]
-    
-    coords_val = coords_val[0:50]
-    feats_val = feats_val[0:50]
-    labels_val = labels_val[0:50]
-    
-
 
     # GPU Settings
     device = 'cuda'
@@ -73,7 +59,7 @@ def training(current_datetime, loadfrom, iso):
         spnn.Conv3d(32, 32, 3),
         spnn.BatchNorm(32),
         spnn.ReLU(True),
-        spnn.Conv3d(32, 5, 1),
+        spnn.Conv3d(32, 7, 1),
     ).to(device)
     
     lr = 1e-3
@@ -81,8 +67,7 @@ def training(current_datetime, loadfrom, iso):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scaler = amp.GradScaler(enabled=amp_enabled)
 
-
-    num_epochs = 100
+    num_epochs = 10
     batch_size = 12
     
     train_set = CustomDataset(coords_train, feats_train, labels_train)
@@ -98,18 +83,32 @@ def training(current_datetime, loadfrom, iso):
     validation_losses = []
     
     for epoch in range(num_epochs):
-    
+
         model.train()
         running_loss = 0.0
         
         for batch_idx, (batch_coords, batch_feats, batch_labels) in enumerate(train_loader):
-            
             tr_inputs_list = []
             tr_labels_list = []
-        
+            
             for i in range(len(batch_coords)):
-                inputs_sparse = SparseTensor(coords=batch_coords[i], feats=batch_feats[i])
-                labels_sparse = SparseTensor(coords=batch_coords[i], feats=batch_labels[i])
+                current_coords = batch_coords[i]
+                current_feats = batch_feats[i]
+                current_labels = batch_labels[i]
+    
+                mask = ~(current_coords == 0).all(axis=1)
+    
+                # Apply the mask to the array
+                current_coords = current_coords[mask]
+                current_feats = current_feats[mask]
+                current_labels = current_labels[mask]
+                
+                current_coords = torch.tensor(current_coords, dtype=torch.int)
+                current_feats = torch.tensor(current_feats, dtype=torch.float)
+                current_labels = torch.tensor(current_labels, dtype=torch.long)
+                
+                inputs_sparse = SparseTensor(coords=current_coords, feats=current_feats)
+                labels_sparse = SparseTensor(coords=current_coords, feats=current_labels)
                 tr_inputs_list.append(inputs_sparse)
                 tr_labels_list.append(labels_sparse)
             
@@ -140,16 +139,32 @@ def training(current_datetime, loadfrom, iso):
                 
                 v_inputs_list = []
                 v_labels_list = []
-            
+
                 for i in range(len(batch_coords)):
-                    inputs_sparse = SparseTensor(coords=batch_coords[i], feats=batch_feats[i])
-                    labels_sparse = SparseTensor(coords=batch_coords[i], feats=batch_labels[i])
+                    current_coords = batch_coords[i]
+                    current_feats = batch_feats[i]
+                    current_labels = batch_labels[i]
+        
+                    mask = ~(current_coords == 0).all(axis=1)
+        
+                    # Apply the mask to the array
+                    current_coords = current_coords[mask]
+                    current_feats = current_feats[mask]
+                    current_labels = current_labels[mask]
+                    
+                    current_coords = torch.tensor(current_coords, dtype=torch.int)
+                    current_feats = torch.tensor(current_feats, dtype=torch.float)
+                    current_labels = torch.tensor(current_labels, dtype=torch.long)
+                    
+                    inputs_sparse = SparseTensor(coords=current_coords, feats=current_feats)
+                    labels_sparse = SparseTensor(coords=current_coords, feats=current_labels)
                     v_inputs_list.append(inputs_sparse)
                     v_labels_list.append(labels_sparse)
-            
+                
                 v_inputs = sparse_collate(v_inputs_list).to(device=device)
                 v_labels = sparse_collate(v_labels_list).to(device=device)
-        
+
+                
                 n_correct = 0
                 
                 with amp.autocast(enabled=True):
