@@ -6,8 +6,9 @@ import numpy as np
 
 @click.command()
 @click.argument('current_datetime', type=str, required=True)
+@click.argument('epochs', type=int, required=True)
 
-def plotting(current_datetime):
+def plotting(current_datetime, epochs):
     datetime_str = current_datetime
     print(f"Received datetime: {datetime_str}")
     
@@ -20,7 +21,7 @@ def plotting(current_datetime):
     validation_losses = np.load(LOSS_PATH + v_filename)
     
     num_epochs = len(training_losses)
-    print(num_epochs)
+    print(num_epochs, epochs)
     epochs = range(1, num_epochs + 1)
     
     plt.figure(figsize=(10, 6))

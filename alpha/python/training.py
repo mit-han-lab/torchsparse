@@ -35,8 +35,12 @@ class CustomDataset(Dataset):
 @click.argument('current_datetime', type=str, required=True)
 @click.argument('loadfrom', type=str, required=True)
 @click.argument('iso', type=str, required=True)
+@click.argument('learning_rate', type=float, required=True)
+@click.argument('epochs', type=int, required=True)
+@click.argument('batch_size', type=int, required=True)
 
-def training(current_datetime, loadfrom, iso):
+
+def training(current_datetime, loadfrom, iso, learning_rate, epochs, batch_size):
     datetime_str = current_datetime
     print(f"Received datetime: {datetime_str}")
     
@@ -62,13 +66,14 @@ def training(current_datetime, loadfrom, iso):
         spnn.Conv3d(32, 7, 1),
     ).to(device)
     
-    lr = 1e-3
+    lr = learning_rate
+    
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scaler = amp.GradScaler(enabled=amp_enabled)
 
-    num_epochs = 10
-    batch_size = 12
+    num_epochs = epochs
+    batch_size = batch_size
     
     train_set = CustomDataset(coords_train, feats_train, labels_train)
     train_loader = DataLoader(train_set, batch_size=batch_size)
@@ -185,7 +190,7 @@ def training(current_datetime, loadfrom, iso):
         os.makedirs(MODEL_PATH)
         os.makedirs(LOSS_PATH)
              
-    filename = f"epochs{num_epochs}_lr{lr}_{datetime_str}.pth"
+    filename = f"epochs{num_epochs}_lr{lr}_train.pth"
     torch.save(model.state_dict(), MODEL_PATH + filename)
     
     tr_filename = f"trainloss_{datetime_str}.npy"
