@@ -69,6 +69,7 @@ def build_kernel_map(
                 spatial_range[i + 1] + 2 * padding[i] - (kernel_size[i] - 1) - 1
             ) // stride[i] + 1
         new_spatial_range = spatial_range[:1] + tuple(new_spatial_range)
+        kmap["spatial_range"] = new_spatial_range
     else:
         new_spatial_range = None
     subm = not (any(s > 1 for s in stride))
