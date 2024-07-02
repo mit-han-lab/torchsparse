@@ -190,6 +190,7 @@ def build_kernel_map(
 
     if dataflow == Dataflow.ImplicitGEMM:
         if training:
+            torch.cuda.synchronize()
             out_in_map_bwd = F.convert_transposed_out_in_map(
                 kmap["out_in_map"], make_divisible(kmap["sizes"][0], cta_M)
             )
