@@ -18,15 +18,23 @@ Point cloud computation has become an increasingly more important workload for a
 
 ## News
 
-**\[2023/10/30\]** We present TorchSparse++ at 56th IEEE/ACM International Symposium on Microarchitecture (MICRO 2023). We also fully release the source code of TorchSparse++.
+**\[2023/11\]** TorchSparse++ has been adopted by [One-2-3-45++](https://arxiv.org/abs/2311.07885) from Prof. Hao Su's lab (UCSD) for 3D object generation!
 
-**\[2023/6/18\]** TorchSparse++ has been released and presented at CVPR 2023 workshops on autonomous driving. It achieves 1.7-2.9x inference speedup over previous state-of-the-art systems.
+**\[2023/10\]** We present TorchSparse++ at 56th IEEE/ACM International Symposium on Microarchitecture (MICRO 2023). We also fully release the source code of TorchSparse++.
 
-**\[2022/8/29\]** TorchSparse is presented at MLSys 2022. Talk video is available [here](https://www.youtube.com/watch?v=IIh4EwmcLUs).
+**\[2023/6\]** TorchSparse++ has been adopted by [One-2-3-45](https://arxiv.org/abs/2306.16928) from Prof. Hao Su's lab (UCSD) for 3D mesh reconstruction!
 
-**\[2022/1/15\]** TorchSparse has been accepted to MLSys 2022, featuring adaptive matrix multiplication grouping and locality-aware memory access.
+**\[2023/6\]** TorchSparse++ has been released and presented at CVPR 2023 workshops on autonomous driving. It achieves 1.7-2.9x inference speedup over previous state-of-the-art systems.
 
-**\[2021/6/24\]** TorchSparse v1.4 has been released.
+**\[2023/1\]** [Argoverse 2](https://arxiv.org/abs/2301.00493) dataset implements their baseline detector with TorchSparse.
+
+**\[2022/8\]** TorchSparse is presented at MLSys 2022. Talk video is available [here](https://www.youtube.com/watch?v=IIh4EwmcLUs).
+
+**\[2022/6\]** TorchSparse has been adopted by [SparseNeuS](https://arxiv.org/pdf/2206.05737) for neural surface reconstruction.
+
+**\[2022/1\]** TorchSparse has been accepted to MLSys 2022, featuring adaptive matrix multiplication grouping and locality-aware memory access.
+
+**\[2021/6\]** TorchSparse v1.4 has been released.
 
 ## Installation
 
