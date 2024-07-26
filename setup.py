@@ -61,7 +61,7 @@ setup(
     ],
     dependency_links=[
         'https://download.pytorch.org/whl/cu118'
-    ]
+    ],
     cmdclass={"build_ext": BuildExtension},
     zip_safe=False,
 )
