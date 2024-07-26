@@ -48,7 +48,7 @@ setup(
             "torchsparse.backend", sources, extra_compile_args=extra_compile_args
         )
     ],
-    url="https://github.com/ioeddk/torchsparse",
+    url="https://github.com/mit-han-lab/torchsparse",
     install_requires=[
         "numpy",
         "backports.cached_property",
