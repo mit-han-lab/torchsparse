@@ -69,6 +69,12 @@ You may also alternatively install our library from source via:
 ```bash
 python setup.py install
 ```
+in the repository, or using  
+
+```
+pip install git+https://github.com/mit-han-lab/torchsparse.git
+```
+without the need to clone the repository. 
 
 ## Benchmarks
 
