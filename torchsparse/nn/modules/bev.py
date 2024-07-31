@@ -197,7 +197,7 @@ class ToBEVHeightCompression(nn.Module):
         assert isinstance(stride, torch.Tensor), type(stride)
 
         # [b, x, y, z]
-        coords = (coords - self.offset).t()[[3] + self.bev_dims + [self.dim]].long()
+        coords = (coords - self.offset).t()[[0] + self.bev_dims + [self.dim]].long()
         shape = self.shape[self.bev_dims + [self.dim]]
 
         # now stride must be torch.Tensor since input.s is tuple.
