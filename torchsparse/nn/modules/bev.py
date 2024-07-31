@@ -93,7 +93,7 @@ class ToDenseBEVConvolution(nn.Module):
             self.kernel, 0, torch.div(coords[:, self.dim], stride).trunc().long()
         )
         feats = (feats.unsqueeze(dim=-1) * kernel).sum(1) + self.bias
-        coords = (coords - self.offset).t()[[3] + self.bev_dims].long()
+        coords = (coords - self.offset).t()[[0] + self.bev_dims].long()
         coords[1:] = torch.div(coords[1:], stride).trunc().long()
         indices = (
             coords[0] * int(self.bev_shape.prod())
