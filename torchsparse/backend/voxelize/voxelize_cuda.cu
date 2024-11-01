@@ -120,10 +120,10 @@ void to_dense_forward_cuda(const at::Tensor inputs, const at::Tensor idx,
   int c = inputs.size(1);
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-      inputs.type(), "to_dense_forward_cuda", ([&]
+      inputs.scalar_type(), "to_dense_forward_cuda", [&]
                                                { to_dense_forward_kernel<scalar_t><<<(N * c + 255) / 256, 256>>>(
                                                      N, c, inputs.data_ptr<scalar_t>(), idx.data_ptr<int>(),
-                                                     range.data_ptr<int>(), outputs.data_ptr<scalar_t>()); }));
+                                                     range.data_ptr<int>(), outputs.data_ptr<scalar_t>()); });
 }
 
 void to_dense_backward_cuda(const at::Tensor top_grad,
@@ -134,8 +134,8 @@ void to_dense_backward_cuda(const at::Tensor top_grad,
   int c = bottom_grad.size(1);
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-      top_grad.type(), "to_dense_backward_cuda", ([&]
+      top_grad.scalar_type(), "to_dense_backward_cuda", [&]
                                                   { to_dense_backward_kernel<scalar_t><<<(N * c + 255) / 256, 256>>>(
                                                         N, c, top_grad.data_ptr<scalar_t>(), idx.data_ptr<int>(),
-                                                        range.data_ptr<int>(), bottom_grad.data_ptr<scalar_t>()); }));
+                                                        range.data_ptr<int>(), bottom_grad.data_ptr<scalar_t>()); });
 }
