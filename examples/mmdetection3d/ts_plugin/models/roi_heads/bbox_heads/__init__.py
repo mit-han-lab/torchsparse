@@ -1,0 +1,1 @@
+from .parta2_bbox_head import PartA2BboxHeadTS
