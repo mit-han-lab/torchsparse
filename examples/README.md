@@ -19,11 +19,6 @@ The dimensions of TorchSparse differs from the SpConv, so the parameter dimensio
 - `framework`: choose between `mmdet3d` and `openpc`. 
 
 ## Example Conversion Commands
-    parser.add_argument("--ckpt_before", help="Path to the SpConv checkpoint")
-    parser.add_argument("--ckpt_after", help="Path to the output folder of the converted checkpoint.")
-    parser.add_argument("--cfg_path", help="Path to the config file of the model")
-    parser.add_argument("--v_spconv", default="1", help="SpConv version used for the weights. Can be one of 1 or 2")
-    parser.add_argument("--framework", default="mmdet3d", help="From which framework does the model weight comes from, choose one of mmdet3d or openpc")
 ### MMDetection3D
 ```bash
 python examples/converter.py --ckpt_before ../mmdetection3d/models/PV-RCNN/pv_rcnn_8xb2-80e_kitti-3d-3class_20221117_234428-b384d22f.pth --cfg_path ../mmdetection3d/pv_rcnn/pv_rcnn_8xb2-80e_kitti-3d-3class.py --ckpt_after ./converted/PV-RCNN/pv_rcnn_8xb2-80e_kitti-3d-3class_20221117_234428-b384d22f.pth --v_spconv 1 --framework mmdet3d
