@@ -86,7 +86,7 @@ at::Tensor voxelize_forward_cuda(const at::Tensor inputs, const at::Tensor idx,
       torch::zeros({N1, c}, at::device(idx.device()).dtype(inputs.dtype()));
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-      inputs.type(), "voxelize_forward_cuda", ([&]
+      inputs.scalar_type(), "voxelize_forward_cuda", ([&]
                                                { voxelize_forward_kernel<scalar_t><<<N, c>>>(
                                                      N, c, N1, inputs.data_ptr<scalar_t>(), idx.data_ptr<int>(),
                                                      counts.data_ptr<int>(), out.data_ptr<scalar_t>()); }));
@@ -105,7 +105,7 @@ at::Tensor voxelize_backward_cuda(const at::Tensor top_grad,
       torch::zeros({N, c}, at::device(idx.device()).dtype(top_grad.dtype()));
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-      top_grad.type(), "voxelize_backward_cuda", ([&]
+      top_grad.scalar_type(), "voxelize_backward_cuda", ([&]
                                                   { voxelize_backward_kernel<scalar_t><<<N, c>>>(
                                                         N, c, N1, top_grad.data_ptr<scalar_t>(), idx.data_ptr<int>(),
                                                         counts.data_ptr<int>(), bottom_grad.data_ptr<scalar_t>()); }));
@@ -120,7 +120,7 @@ void to_dense_forward_cuda(const at::Tensor inputs, const at::Tensor idx,
   int c = inputs.size(1);
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-      inputs.type(), "to_dense_forward_cuda", ([&]
+      inputs.scalar_type(), "to_dense_forward_cuda", ([&]
                                                { to_dense_forward_kernel<scalar_t><<<(N * c + 255) / 256, 256>>>(
                                                      N, c, inputs.data_ptr<scalar_t>(), idx.data_ptr<int>(),
                                                      range.data_ptr<int>(), outputs.data_ptr<scalar_t>()); }));
@@ -134,7 +134,7 @@ void to_dense_backward_cuda(const at::Tensor top_grad,
   int c = bottom_grad.size(1);
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-      top_grad.type(), "to_dense_backward_cuda", ([&]
+      top_grad.scalar_type(), "to_dense_backward_cuda", ([&]
                                                   { to_dense_backward_kernel<scalar_t><<<(N * c + 255) / 256, 256>>>(
                                                         N, c, top_grad.data_ptr<scalar_t>(), idx.data_ptr<int>(),
                                                         range.data_ptr<int>(), bottom_grad.data_ptr<scalar_t>()); }));
