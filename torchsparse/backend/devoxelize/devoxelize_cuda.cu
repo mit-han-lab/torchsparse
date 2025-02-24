@@ -68,7 +68,7 @@ at::Tensor devoxelize_forward_cuda(const at::Tensor feat,
       torch::zeros({N, c}, at::device(feat.device()).dtype(feat.dtype()));
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-      feat.type(), "devoxelize_forward_cuda", ([&] {
+      feat.scalar_type(), "devoxelize_forward_cuda", ([&] {
         devoxelize_forward_kernel<scalar_t><<<N, c>>>(
             N, c, indices.data_ptr<int>(), weight.data_ptr<scalar_t>(),
             feat.data_ptr<scalar_t>(), out.data_ptr<scalar_t>());
@@ -88,7 +88,7 @@ at::Tensor devoxelize_backward_cuda(const at::Tensor top_grad,
       {n, c}, at::device(top_grad.device()).dtype(top_grad.dtype()));
 
   AT_DISPATCH_FLOATING_TYPES_AND_HALF(
-      top_grad.type(), "devoxelize_backward_cuda", ([&] {
+      top_grad.scalar_type(), "devoxelize_backward_cuda", ([&] {
         devoxelize_backward_kernel<scalar_t><<<N, c>>>(
             N, n, c, indices.data_ptr<int>(), weight.data_ptr<scalar_t>(),
             top_grad.data_ptr<scalar_t>(), bottom_grad.data_ptr<scalar_t>());
