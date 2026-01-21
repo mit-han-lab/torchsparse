@@ -1,4 +1,5 @@
 #include <torch/extension.h>
+#include <c10/cuda/CUDAGuard.h>
 #include "reduce_bitmask_cuda.h"
 
 
@@ -61,6 +62,7 @@ torch::Tensor reduce_bitmask_cuda(
     torch::Tensor _bitmask_int,
     int M_tile
 ){
+    c10::cuda::CUDAGuard guard(_bitmask_int.device());
     if (M_tile % 4 != 0)
     {
       throw std::runtime_error("[Bitmask reduce] reduce tile size must be multiple of 4.");

@@ -1,5 +1,6 @@
 #include <torch/torch.h>
 
+#include <c10/cuda/CUDAGuard.h>
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -33,6 +34,7 @@ __global__ void derive_bit_mask_from_out_in_map_kernel(int* out_in_map, int* bit
 at::Tensor hash_query_cuda(const at::Tensor hash_query,
                            const at::Tensor hash_target,
                            const at::Tensor idx_target) {
+  c10::cuda::CUDAGuard guard(hash_query.device());
   // return group_point_forward_gpu(points, indices);
   int n = hash_target.size(0);
   int n1 = hash_query.size(0);
@@ -49,6 +51,7 @@ at::Tensor hash_query_cuda(const at::Tensor hash_query,
 
 void convert_transposed_out_in_map(const at::Tensor out_in_map,
                             at::Tensor out_in_map_t) {
+  c10::cuda::CUDAGuard guard(out_in_map.device());
   convert_out_in_map_kernel<<<(out_in_map.size(0) * out_in_map.size(1) + 255) / 256, 256>>>(
     out_in_map.data_ptr<int>(), out_in_map_t.data_ptr<int>(), out_in_map.size(0), out_in_map.size(1));
 }
@@ -57,6 +60,7 @@ void convert_transposed_out_in_map(const at::Tensor out_in_map,
 
 
 at::Tensor derive_bitmask_from_out_in_map(const at::Tensor out_in_map, const int split_mask_num, int valid_n) {
+  c10::cuda::CUDAGuard guard(out_in_map.device());
   at::Tensor bitmask = torch::full(
       {split_mask_num, out_in_map.size(0)}, -1, at::device(out_in_map.device()).dtype(at::ScalarType::Int));
   derive_bit_mask_from_out_in_map_kernel<<<(split_mask_num * out_in_map.size(0) + 255) / 256, 256>>>(

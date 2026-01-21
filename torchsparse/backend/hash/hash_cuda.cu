@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <torch/torch.h>
 
+#include <c10/cuda/CUDAGuard.h>
 #include <cmath>
 #include <vector>
 // hashing
@@ -64,6 +65,7 @@ void hash_wrapper(int N, const int *data, int64_t *out) {
 }
 
 at::Tensor hash_cuda(const at::Tensor idx) {
+  c10::cuda::CUDAGuard guard(idx.device());
   int N = idx.size(0);
   at::Tensor out =
       torch::zeros({N}, at::device(idx.device()).dtype(at::ScalarType::Long));
@@ -73,6 +75,7 @@ at::Tensor hash_cuda(const at::Tensor idx) {
 
 at::Tensor kernel_hash_cuda(const at::Tensor idx,
                             const at::Tensor kernel_offset) {
+  c10::cuda::CUDAGuard guard(idx.device());
   int N = idx.size(0);
   int K = kernel_offset.size(0);
   at::Tensor out = torch::zeros(

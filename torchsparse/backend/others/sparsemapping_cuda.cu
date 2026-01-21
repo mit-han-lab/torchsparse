@@ -1,6 +1,7 @@
 #include <torch/extension.h>
 #include <torch/torch.h>
 
+#include <c10/cuda/CUDAGuard.h>
 #include <algorithm>
 #include <cstdio>
 #include <vector>
@@ -261,6 +262,7 @@ std::vector<at::Tensor> build_kernel_map_subm_hashmap_int32(
     at::Tensor _in_coords, at::Tensor _coords_min, at::Tensor _coords_max,
     at::Tensor _kernel_sizes, at::Tensor _stride,
     at::Tensor _padding, bool to_insert) {
+  c10::cuda::CUDAGuard guard(_in_coords.device());
   int n_points = _in_coords.size(0);
   int kernel_volume = (int)(torch::prod(_kernel_sizes).item<int>());
   int *in_coords = _in_coords.data_ptr<int>();
@@ -305,6 +307,7 @@ std::vector<at::Tensor> build_kernel_map_subm_hashmap(
     at::Tensor _in_coords, at::Tensor _coords_min, at::Tensor _coords_max,
     at::Tensor _kernel_sizes, at::Tensor _stride,
     at::Tensor _padding, bool to_insert) {
+  c10::cuda::CUDAGuard guard(_in_coords.device());
   int n_points = _in_coords.size(0);
   int kernel_volume = (int)(torch::prod(_kernel_sizes).item<int>());
   int *in_coords = _in_coords.data_ptr<int>();
@@ -349,6 +352,7 @@ std::vector<at::Tensor> build_kernel_map_downsample_hashmap_int32(
     at::Tensor _in_coords, at::Tensor _coords_min, at::Tensor _coords_max,
     at::Tensor _kernel_sizes, at::Tensor _stride,
     at::Tensor _padding, bool to_insert) {
+  c10::cuda::CUDAGuard guard(_in_coords.device());
   int n_points = _in_coords.size(0);
   int kernel_volume = (int)(torch::prod(_kernel_sizes).item<int>());
   int *in_coords = _in_coords.data_ptr<int>();
@@ -431,6 +435,7 @@ std::vector<at::Tensor> build_kernel_map_downsample_hashmap(
     at::Tensor _in_coords, at::Tensor _coords_min, at::Tensor _coords_max,
     at::Tensor _kernel_sizes, at::Tensor _stride,
     at::Tensor _padding, bool to_insert) {
+  c10::cuda::CUDAGuard guard(_in_coords.device());
   int n_points = _in_coords.size(0);
   int kernel_volume = (int)(torch::prod(_kernel_sizes).item<int>());
   int *in_coords = _in_coords.data_ptr<int>();
@@ -510,6 +515,7 @@ std::vector<at::Tensor> build_kernel_map_downsample_hashmap(
 std::vector<at::Tensor> build_mask_from_kmap(int n_points, int n_out_points,
                                              at::Tensor _kmap,
                                              at::Tensor _kmap_sizes) {
+  c10::cuda::CUDAGuard guard(_kmap.device());
   int kernel_volume = _kmap_sizes.size(0);
   auto options =
       torch::TensorOptions().dtype(at::ScalarType::Int).device(_kmap.device());

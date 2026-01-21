@@ -3,6 +3,7 @@
 #include <thrust/device_vector.h>
 #include <torch/extension.h>
 
+#include <c10/cuda/CUDAGuard.h>
 #include <THC/THCAtomics.cuh>
 
 // input features (n, c), indices (N, 8), weight (N, 8) -> output features (N,
@@ -61,6 +62,7 @@ __global__ void devoxelize_backward_kernel(
 at::Tensor devoxelize_forward_cuda(const at::Tensor feat,
                                    const at::Tensor indices,
                                    const at::Tensor weight) {
+  c10::cuda::CUDAGuard guard(feat.device());
   int c = feat.size(1);
   int N = indices.size(0);
 
@@ -82,6 +84,7 @@ at::Tensor devoxelize_forward_cuda(const at::Tensor feat,
 at::Tensor devoxelize_backward_cuda(const at::Tensor top_grad,
                                     const at::Tensor indices,
                                     const at::Tensor weight, int n) {
+  c10::cuda::CUDAGuard guard(top_grad.device());
   int c = top_grad.size(1);
   int N = top_grad.size(0);
   at::Tensor bottom_grad = torch::zeros(

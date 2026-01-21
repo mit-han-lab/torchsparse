@@ -1,6 +1,7 @@
 #include <torch/extension.h>
 #include <torch/torch.h>
 
+#include <c10/cuda/CUDAGuard.h>
 #include <algorithm>
 #include <cstdio>
 #include <vector>
@@ -147,7 +148,7 @@ Idea: launch get_output_coords_kernel then inverse_transform_coords_kernel
 at::Tensor downsample_cuda(at::Tensor _in_coords, at::Tensor _coords_max,
                            at::Tensor _coords_min, at::Tensor _kernel_sizes,
                            at::Tensor _stride, at::Tensor _padding) {
-  
+  c10::cuda::CUDAGuard guard(_in_coords.device());
   int N = _in_coords.size(0);
   int kernel_volume = (int)(torch::prod(_kernel_sizes).item<int>());
   int *in_coords = _in_coords.data_ptr<int>();

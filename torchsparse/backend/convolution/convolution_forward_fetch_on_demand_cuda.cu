@@ -10,6 +10,7 @@ Please consider citing the following paper when using the code:
 */
 
 #include <ATen/cuda/CUDAContext.h>
+#include <c10/cuda/CUDAGuard.h>
 #include <cublas_v2.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -1979,12 +1980,12 @@ __global__ void fetch_on_demand_gemm_no_fusion_fp16(
 //                      with unused weights having 0 and neighbor_offset[k^3/2]
 //                      holding w[0,0].
 at::Tensor conv_forward_fetch_on_demand_cuda(
-    at::Tensor in_feat, at::Tensor kernel, 
-    at::Tensor neighbor_map, const int sum_nnz, 
+    at::Tensor in_feat, at::Tensor kernel,
+    at::Tensor neighbor_map, const int sum_nnz,
     at::Tensor neighbor_address, at::Tensor q_neighbor_address,
-    const int output_size, const int qsum_nnz, const bool transpose, 
+    const int output_size, const int qsum_nnz, const bool transpose,
     const bool allow_tf32, const bool allow_fp16) {
-
+  c10::cuda::CUDAGuard guard(in_feat.device());
   // int sum_nnz = (int)torch::sum(neighbor_offset).item<int>();
   int input_size = in_feat.size(0);
   int in_channel = in_feat.size(1);
@@ -2135,10 +2136,10 @@ at::Tensor conv_forward_fetch_on_demand_cuda(
 
 at::Tensor conv_forward_fetch_on_demand_no_fusion_cuda(
     at::Tensor in_feat, at::Tensor kernel,
-    at::Tensor neighbor_map, at::Tensor neighbor_offset, 
-    const int sum_nnz, const int output_size, const bool transpose, 
+    at::Tensor neighbor_map, at::Tensor neighbor_offset,
+    const int sum_nnz, const int output_size, const bool transpose,
     const bool allow_tf32, const bool allow_fp16){
-
+  c10::cuda::CUDAGuard guard(in_feat.device());
   // int sum_nnz = (int)torch::sum(neighbor_offset).item<int>();
   int input_size = in_feat.size(0);
   int in_channel = in_feat.size(1);

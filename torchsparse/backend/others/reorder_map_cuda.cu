@@ -1,4 +1,5 @@
 #include <torch/extension.h>
+#include <c10/cuda/CUDAGuard.h>
 #include "reorder_map_cuda.h"
 
 #define cta_M 128
@@ -26,7 +27,7 @@ at::Tensor reorder_out_in_map_cuda(
     torch::Tensor _out_in_map,
     torch::Tensor _reorder_loc
 ){
-
+    c10::cuda::CUDAGuard guard(_out_in_map.device());
     int M = _out_in_map.size(0);
     int kernel_volume = _out_in_map.size(1);
     int split_mask_num = _reorder_loc.size(0);

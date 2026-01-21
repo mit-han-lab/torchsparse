@@ -1,4 +1,5 @@
 #include <ATen/cuda/CUDAContext.h>
+#include <c10/cuda/CUDAGuard.h>
 #include <cublas_v2.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -281,6 +282,7 @@ at::Tensor conv_forward_gather_scatter_cuda(
     at::Tensor neighbor_offset, at::Tensor input_mask, at::Tensor output_mask,
     const int output_size, const float epsilon, const int mm_thresh,
     const int conv_mode, const bool transpose, at::Tensor global_buffer) {
+  c10::cuda::CUDAGuard guard(in_feat.device());
   int buffer_size = (int)torch::sum(neighbor_offset).item<int>();
   // be careful about the fallback setting
 
@@ -412,6 +414,7 @@ at::Tensor conv_forward_gather_scatter_cuda_latest(
     at::Tensor neighbor_offset, at::Tensor input_mask, at::Tensor output_mask,
     const int output_size, const float epsilon, const int mm_thresh,
     const int conv_mode, const bool transpose, at::Tensor global_buffer) {
+  c10::cuda::CUDAGuard guard(in_feat.device());
   if (in_feat.size(1) != _kernel.size(1)) {
     throw std::invalid_argument("Input feature size and kernel size mismatch");
   }
@@ -682,6 +685,7 @@ at::Tensor conv_forward_gather_scatter_cuda_fallback(
     at::Tensor in_feat, at::Tensor kernel, at::Tensor neighbor_map,
     const int output_size, const int conv_mode, at::Tensor neighbor_offset,
     const bool transpose) {
+  c10::cuda::CUDAGuard guard(in_feat.device());
   if (in_feat.size(1) != kernel.size(1)) {
     throw std::invalid_argument("Input feature size and kernel size mismatch");
   }
@@ -817,6 +821,7 @@ void conv_backward_gather_scatter_cuda(at::Tensor in_feat, at::Tensor grad_in_fe
                                at::Tensor grad_kernel, at::Tensor neighbor_map,
                                at::Tensor neighbor_offset,
                                const bool transpose) {
+  c10::cuda::CUDAGuard guard(in_feat.device());
   grad_in_feat.resize_as_(in_feat);
   grad_in_feat.zero_();
   grad_kernel.resize_as_(kernel);

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <torch/torch.h>
 
+#include <c10/cuda/CUDAGuard.h>
 #include <THC/THCAtomics.cuh>
 #include <cmath>
 
@@ -78,6 +79,7 @@ __global__ void voxelize_backward_kernel(int N, int c, int s,
 at::Tensor voxelize_forward_cuda(const at::Tensor inputs, const at::Tensor idx,
                                  const at::Tensor counts)
 {
+  c10::cuda::CUDAGuard guard(inputs.device());
   int N = inputs.size(0);
   int c = inputs.size(1);
   int N1 = counts.size(0);
@@ -98,6 +100,7 @@ at::Tensor voxelize_backward_cuda(const at::Tensor top_grad,
                                   const at::Tensor idx, const at::Tensor counts,
                                   const int N)
 {
+  c10::cuda::CUDAGuard guard(top_grad.device());
   int c = top_grad.size(1);
   int N1 = counts.size(0);
 
@@ -116,6 +119,7 @@ at::Tensor voxelize_backward_cuda(const at::Tensor top_grad,
 void to_dense_forward_cuda(const at::Tensor inputs, const at::Tensor idx,
                            const at::Tensor range, at::Tensor outputs)
 {
+  c10::cuda::CUDAGuard guard(inputs.device());
   int N = inputs.size(0);
   int c = inputs.size(1);
 
@@ -130,6 +134,7 @@ void to_dense_backward_cuda(const at::Tensor top_grad,
                             const at::Tensor idx, const at::Tensor range,
                             const at::Tensor bottom_grad)
 {
+  c10::cuda::CUDAGuard guard(top_grad.device());
   int N = bottom_grad.size(0);
   int c = bottom_grad.size(1);
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <torch/torch.h>
 
+#include <c10/cuda/CUDAGuard.h>
 #include <cmath>
 #include <vector>
 
@@ -23,6 +24,7 @@ void count_wrapper(int N, const int *data, int *out) {
 // feat: (b,c,n) indices: (b,n) -> out: (b,c,s), out_indices: (b,n)
 // (preprocessed indices)
 at::Tensor count_cuda(const at::Tensor idx, const int s) {
+  c10::cuda::CUDAGuard guard(idx.device());
   int N = idx.size(0);
   at::Tensor out =
       torch::zeros({s}, at::device(idx.device()).dtype(at::ScalarType::Int));

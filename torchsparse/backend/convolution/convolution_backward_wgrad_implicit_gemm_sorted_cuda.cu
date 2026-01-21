@@ -1,4 +1,5 @@
 #include <torch/extension.h>
+#include <c10/cuda/CUDAGuard.h>
 #include "convolution_backward_wgrad_implicit_gemm_sorted_cuda.h"
 #include "../utils/memory.cuh"
 #include <cuda_fp16.h>
@@ -1747,6 +1748,7 @@ at::Tensor conv_backward_wgrad_implicit_gemm_sorted_cuda(
     torch::Tensor _reorder_loc, const int split_k_iters,
     bool allow_tf32, bool allow_fp16)
 {
+  c10::cuda::CUDAGuard guard(_in_feats.device());
   bool is_tf = allow_tf32;
   int num_in_feats = _in_feats.size(0);
   int num_in_channels = _in_feats.size(1);
