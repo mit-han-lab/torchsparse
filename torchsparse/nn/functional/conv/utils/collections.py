@@ -25,8 +25,6 @@
 #       IMPORT
 # --------------------------------------
 
-import rootpath
-
 import collections
 
 from . import compat

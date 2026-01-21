@@ -80,7 +80,6 @@ setup(
         "tqdm",
         "typing-extensions",
         "wheel",
-        "rootpath",
         "attributedict",
     ],
     cmdclass={"build_ext": BuildExtension},

@@ -25,8 +25,6 @@
 #       DEPS
 # --------------------------------------
 
-import rootpath
-
 # @see https://github.com/benjaminp/six/blob/master/six.py
 
 import sys

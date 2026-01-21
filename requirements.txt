@@ -4,4 +4,3 @@ tqdm
 typing-extensions
 wheel
 attributedict
-rootpath
