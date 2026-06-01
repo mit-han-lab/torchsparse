@@ -1,0 +1,65 @@
+name: Build Wheels
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build_linux:
+    name: Linux Wheels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build Linux CPU wheels
+        uses: pypa/cibuildwheel@v3.4.1
+        with:
+          package-dir: "."
+          output-dir: "wheelhouse"
+        env:
+          CIBW_BUILD: "cp310-manylinux_x86_64"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.11"
+          CIBW_BEFORE_BUILD: "pip install torch==2.12.0+cpu --index-url https://download.pytorch.org/whl/cpu"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-linux
+          path: wheelhouse/*.whl
+
+  build_windows:
+    name: Windows Wheels
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build Windows CPU wheels
+        uses: pypa/cibuildwheel@v3.4.1
+        with:
+          package-dir: "."
+          output-dir: "wheelhouse"
+        env:
+          CIBW_BUILD: "cp310-win_amd64"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.11"
+          CIBW_BEFORE_BUILD: "pip install torch==2.12.0+cpu --index-url https://download.pytorch.org/whl/cpu"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-windows
+          path: wheelhouse/*.whl
+
+  build_macos:
+    name: macOS Wheels
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build macOS CPU wheels
+        uses: pypa/cibuildwheel@v3.4.1
+        with:
+          package-dir: "."
+          output-dir: "wheelhouse"
+        env:
+          CIBW_BUILD: "cp310-macosx_arm64"
+          CIBW_MACOSX_ARCHITECTURES: "arm64"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.11"
+          CIBW_BEFORE_BUILD: "pip install torch==2.12.0 --index-url https://download.pytorch.org/whl/cpu"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-macos
+          path: wheelhouse/*.whl
